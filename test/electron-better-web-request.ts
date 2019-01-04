@@ -1,4 +1,5 @@
 import assert = require('assert');
+import BetterWebRequest from '../src/electron-better-web-request';
 
 describe('Electron Better Web Request', () => {
   describe('Lifecycle events', () => {
@@ -8,8 +9,38 @@ describe('Electron Better Web Request', () => {
   });
 
   describe('Register many listeners', () => {
+    // Pre / post conditions
+    beforeEach(() => {
+
+    });
+
+    afterEach(() => {
+      BetterWebRequest.reset();
+    });
+
+    // Mocked bersion of electron web request
+    const mockedWebRequest = {
+      onBeforeRedirect: () => {
+        console.log('onBeforeRedirect has been called');
+      },
+    };
+
+    // Actual tests
     it('can add a listener', () => {
-      assert.ok(true);
+      const betterWR = new BetterWebRequest(mockedWebRequest);
+      const listeners = betterWR.getListeners();
+
+      if (listeners) {
+        assert.equal(listeners.size, 0);
+
+        betterWR.addListener('onBeforeRedirect', { urls: [] }, () => {
+          console.log('ceci est juste un test');
+        });
+
+        assert.equal(listeners.size, 1);
+      } else {
+        assert.fail('Electron Better Web Request has no map listeners initialised');
+      }
     });
 
     it('keeps track of all added listeners', () => {
@@ -33,7 +64,8 @@ describe('Electron Better Web Request', () => {
     });
   });
 
-  describe('Resolve listeners queue', () => {
+  // todo : Update this part
+  describe('Resolve listeners', () => {
     describe('Default resolver', () => {
       it('has a default resolver', () => {
 

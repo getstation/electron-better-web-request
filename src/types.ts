@@ -10,7 +10,7 @@ type WebRequestWithoutCallback =
   'onCompleted' |
   'onErrorOccurred';
 
-export type WebRequestMethods = WebRequestWithCallback | WebRequestWithoutCallback;
+export type WebRequestMethod = WebRequestWithCallback | WebRequestWithoutCallback;
 
 export interface IFilter {
   urls: string[],
@@ -19,6 +19,7 @@ export interface IFilter {
 export interface IListener {
   urls: string[],
   action: Function,
+  context: object,
 }
 
 export interface IListenerOptions {
@@ -31,7 +32,7 @@ export interface Response {
 }
 
 export interface IBetterWebRequest {
-  hasCallback(method: WebRequestMethods): Boolean;
+  hasCallback(method: WebRequestMethod): Boolean;
 
   onBeforeRequest(filter: IFilter, action: Function, options: IListenerOptions): void;
   onBeforeSendHeaders(filter: IFilter, action: Function, options: IListenerOptions): void;
@@ -42,5 +43,5 @@ export interface IBetterWebRequest {
   onCompleted(filter: IFilter, action: Function, options: IListenerOptions): void;
   onErrorOccurred(filter: IFilter, action: Function, options: IListenerOptions): void;
 
-  setConflictResolver(requestType: WebRequestMethods, resolver: Function): void;
+  setConflictResolver(requestMethod: WebRequestMethod, resolver: Function): void;
 }
