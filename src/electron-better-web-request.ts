@@ -75,7 +75,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
     this.filters.set(requestMethod, mergedFilters);
 
     // Remake the new hook
-    this.webRequest[requestMethod](mergedFilters, this.listenerFactory(requestMethod));
+    this.webRequest[requestMethod](mergedFilters, this.listenerFactory);
   }
 
   // todo : update this, it doesn't work at all
@@ -112,32 +112,42 @@ export default class BetterWebRequest implements IBetterWebRequest {
   }
 
   /**
-   * Factory : Return a closure with the expected signature for electron.webrequest.onXXXX()
-   * + requestMethod available
+   * Workflow triggered when a web request arrive
+   * Use the original listener signature needed by electron.webrequest.onXXXX()
    */
-  private listenerFactory(requestMethod: WebRequestMethod) {
-    return (details: any, callback: Function) => {
-      if (!this.listeners.has(requestMethod)) {
-        throw new Error(`No listeners for the requested method ${requestMethod}`);
-      }
-      const listeners = this.listeners.get(requestMethod);
-      // @ts-ignore
-      const matchedListeners = this.matchListeners(details, listeners);
+  private listenerFactory(details: any, callback: Function) {
+    // todo : Check this, if not, remarke a factory
+    const requestMethod = details.method;
+    if (!this.listeners.has(requestMethod)) {
+      throw new Error(`No listeners for the requested method ${requestMethod}`);
+    }
+    const listeners = this.listeners.get(requestMethod);
+    // @ts-ignore
+    const matchedListeners = this.matchListeners(details.url, listeners);
 
-      let resolve = this.resolvers.get(requestMethod);
-      if (!resolve) resolve = defaultResolver;
+    let resolve = this.resolvers.get(requestMethod);
+    if (!resolve) resolve = defaultResolver;
 
-      const requestsProcesses = this.processRequests(details, matchedListeners);
-      const modified = resolve(requestsProcesses);
+    const requestsProcesses = this.processRequests(details, matchedListeners);
+    const modified = resolve(requestsProcesses);
 
-      callback(modified);
-    };
+    callback(modified);
   }
 
-  private matchListeners(details: any, listeners: Set<IListener>): IListener[] {
-    // Match all url patterns with regexp
-    console.log('Hello');
-    return [];
+  private matchListeners(url: string, listeners: IListener[]): IListener[] {
+    const subset = listeners.filter(element => {
+      for (const pattern of element.urls) {
+        if (this.matchPattern(url, pattern)) return true;
+      }
+      return false;
+    });
+
+    return subset;
+  }
+
+  // @ts-ignore
+  private matchPattern(url: string, pattern: string): Boolean {
+    return true;
   }
 
   /**
