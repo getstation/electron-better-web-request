@@ -1,4 +1,5 @@
 import assert = require('assert');
+
 import BetterWebRequest from '../src/electron-better-web-request';
 
 describe('Electron Better Web Request', () => {
