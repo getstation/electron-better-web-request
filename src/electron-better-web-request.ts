@@ -1,12 +1,14 @@
+import match from 'match-chrome';
+
 import {
   IBetterWebRequest,
   WebRequestMethod,
   IFilter,
   IListener,
   IListenerOptions,
-  Response,
 } from './types';
 
+// todo : create a default resolver according specs
 const defaultResolver = () => {
 
 };
@@ -17,6 +19,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
   private webRequest: any;
 
   private listeners: Map<string, Set<IListener>>;
+  // todo : use a weak set instead of an array
   private filters: Map<string, string[]>;
   private resolvers: Map<string, Function>;
 
@@ -53,7 +56,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
   onErrorOccurred(filter: IFilter, action: Function, options: Partial<IListenerOptions> = {})
   { this.addListener('onErrorOccurred', filter, action, options); }
 
-  addListener(requestMethod: WebRequestMethod, filter: IFilter, action: Function, context: Partial<IListenerOptions> = {}) {
+  addListener(method: WebRequestMethod, filter: IFilter, action: Function, context: Partial<IListenerOptions> = {}) {
     const { urls } = filter;
     const listener = {
       urls,
@@ -62,34 +65,39 @@ export default class BetterWebRequest implements IBetterWebRequest {
     };
 
     // Track this new listener
-    if (!this.listeners.has(requestMethod)) {
-      this.listeners.set(requestMethod, new Set());
+    if (!this.listeners.has(method)) {
+      this.listeners.set(method, new Set());
     }
     // @ts-ignore
-    this.listeners.get(requestMethod).add(listener);
+    this.listeners.get(method).add(listener);
 
     // Compute the all inclusive filter
-    const currentFilters = (this.filters.has(requestMethod)) ? this.filters.get(requestMethod) : [] ;
+    const currentFilters = (this.filters.has(method)) ? this.filters.get(method) : [] ;
     // @ts-ignore
     const mergedFilters = [...currentFilters, ...urls];
-    this.filters.set(requestMethod, mergedFilters);
+    this.filters.set(method, mergedFilters);
 
     // Remake the new hook
-    this.webRequest[requestMethod](mergedFilters, this.listenerFactory);
+    this.webRequest[method](mergedFilters, this.listenerFactory);
   }
 
-  // todo : update this, it doesn't work at all
-  removeListener(requestMethod: WebRequestMethod, listener: IListener) {
-    // Remove from the map
-    const listeners = this.listeners.get(requestMethod);
+  removeListener(method: WebRequestMethod, listener: IListener) {
+    const listeners = this.listeners.get(method);
     if (listeners) {
+      // Remove from the map
       listeners.delete(listener);
+      // Remove url patterns from the global pattern by recreatting the whole list from scratch
+      const newFilters = this.mergeFilters(listeners);
+      this.filters.set(method, newFilters);
     }
-    // Remove url patterns from the global pattern
   }
 
-  getListeners(requestMethod: WebRequestMethod | undefined = undefined) {
-    return (requestMethod) ? this.listeners.get(requestMethod) : this.listeners;
+  getListeners(method: WebRequestMethod | undefined = undefined) {
+    return (method) ? this.listeners.get(method) : this.listeners;
+  }
+
+  getFilters(method: WebRequestMethod | undefined = undefined) {
+    return (method) ? this.filters.get(method) : this.filters;
   }
 
   hasCallback(method: WebRequestMethod): boolean {
@@ -103,41 +111,21 @@ export default class BetterWebRequest implements IBetterWebRequest {
     }
   }
 
-  setConflictResolver(requestMethod: WebRequestMethod, resolver: Function) {
-    if (this.resolvers.has(requestMethod)) {
+  setConflictResolver(method: WebRequestMethod, resolver: Function) {
+    if (this.resolvers.has(method)) {
       // todo : update this as real logger thingy ?
-      console.warn('Overriding resolver on ', requestMethod);
+      console.warn('Overriding resolver on ', method);
     }
-    this.resolvers.set(requestMethod, resolver);
+    this.resolvers.set(method, resolver);
   }
 
   /**
-   * Workflow triggered when a web request arrive
-   * Use the original listener signature needed by electron.webrequest.onXXXX()
+   * Find a subset of listeners that match with a given url
    */
-  private listenerFactory(details: any, callback: Function) {
-    // todo : Check this, if not, remarke a factory
-    const requestMethod = details.method;
-    if (!this.listeners.has(requestMethod)) {
-      throw new Error(`No listeners for the requested method ${requestMethod}`);
-    }
-    const listeners = this.listeners.get(requestMethod);
-    // @ts-ignore
-    const matchedListeners = this.matchListeners(details.url, listeners);
-
-    let resolve = this.resolvers.get(requestMethod);
-    if (!resolve) resolve = defaultResolver;
-
-    const requestsProcesses = this.processRequests(details, matchedListeners);
-    const modified = resolve(requestsProcesses);
-
-    callback(modified);
-  }
-
-  private matchListeners(url: string, listeners: IListener[]): IListener[] {
+  matchListeners(url: string, listeners: IListener[]): IListener[] {
     const subset = listeners.filter(element => {
       for (const pattern of element.urls) {
-        if (this.matchPattern(url, pattern)) return true;
+        if (match(url, pattern)) return true;
       }
       return false;
     });
@@ -145,9 +133,27 @@ export default class BetterWebRequest implements IBetterWebRequest {
     return subset;
   }
 
-  // @ts-ignore
-  private matchPattern(url: string, pattern: string): Boolean {
-    return true;
+  /**
+   * Workflow triggered when a web request arrive
+   * Use the original listener signature needed by electron.webrequest.onXXXX()
+   */
+  private listenerFactory(details: any, callback: Function) {
+    // todo : Check that we have access to the method in details, if not : remake a factory
+    const method = details.method;
+    if (!this.listeners.has(method)) {
+      throw new Error(`No listeners for the requested method ${method}`);
+    }
+    const listeners = this.listeners.get(method);
+    // @ts-ignore
+    const matchedListeners = this.matchListeners(details.url, listeners);
+
+    let resolve = this.resolvers.get(method);
+    if (!resolve) resolve = defaultResolver;
+
+    const requestsProcesses = this.processRequests(details, matchedListeners);
+    const modified = resolve(requestsProcesses);
+
+    callback(modified);
   }
 
   /**
@@ -183,5 +189,14 @@ export default class BetterWebRequest implements IBetterWebRequest {
         }
       });
     };
+  }
+
+  private mergeFilters(listeners: Set<IListener>) {
+    const filters = Array.from(listeners).reduce(
+      (accumulator, value) => [...accumulator, ...value.urls],
+      []
+    );
+
+    return filters;
   }
 }

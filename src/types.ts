@@ -44,4 +44,5 @@ export interface IBetterWebRequest {
   onErrorOccurred(filter: IFilter, action: Function, options: IListenerOptions): void;
 
   setConflictResolver(requestMethod: WebRequestMethod, resolver: Function): void;
+  matchListeners(url: string, listeners: IListener[]): IListener[];
 }

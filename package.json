@@ -18,5 +18,7 @@
     "tslint-config-station": "^0.5.1",
     "typescript": "^3.2.2"
   },
-  "dependencies": {}
+  "dependencies": {
+    "match-chrome": "^1.0.0"
+  }
 }
