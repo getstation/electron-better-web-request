@@ -128,11 +128,9 @@ describe('Listeners & Filters Manipulation', () => {
     beforeEach(() => {
       BetterWebRequest.reset();
       webRq = new BetterWebRequest(mockedWebRequest);
-      webRq.addListener('onBeforeRequest', { urls: ['foo.url'] }, () => {}, { origin: 'FOO' });
+      listener = webRq.addListener('onBeforeRequest', { urls: ['foo.url'] }, () => {}, { origin: 'FOO' });
       webRq.addListener('onBeforeRequest', { urls: ['baz.url'] }, () => {}, { origin: 'BAZ' });
       webRq.addListener('onBeforeSendHeaders', { urls: ['bar.url'] }, () => {}, { origin: 'BAR' });
-      // @ts-ignore
-      listener = Array.from(webRq.getListeners('onBeforeRequest'))[0];
       // @ts-ignore
       globalListeners = webRq.getListeners();
       // @ts-ignore
@@ -140,45 +138,39 @@ describe('Listeners & Filters Manipulation', () => {
     });
 
     it('removes one listerner from a method type', () => {
-      if (globalListeners && methodListeners) {
-        // Before
-        assert.equal(globalListeners.size, 2);
-        assert.equal(methodListeners.size, 2);
+      assert.equal(globalListeners.size, 2);
+      assert.equal(methodListeners.size, 2);
 
-        webRq.removeListener('onBeforeRequest', listener);
+      webRq.removeListener('onBeforeRequest', listener.id);
 
-        // After
-        assert.equal(globalListeners.size, 2);
-        assert.equal(methodListeners.size, 1);
-        // todo : Check if the one that is left is the correct one
-      } else {
-        assert.fail('Map listeners was not initialized');
-      }
+      assert.equal(globalListeners.size, 2);
+      assert.equal(methodListeners.size, 1);
+      // todo : Check if the one that is left is the correct one
     });
 
     it('removes the listener pattern from the global filters with the listener itself', () => {
       const globalFilters = webRq.getFilters();
-      let methodFilters = webRq.getFilters('onBeforeRequest');
+      const beforeFilters = webRq.getFilters('onBeforeRequest');
 
-      if (globalFilters && methodFilters) {
+      if (globalFilters && beforeFilters) {
         // Before
         // @ts-ignore
         assert.equal(globalFilters.size, 2);
         // @ts-ignore
-        assert.equal(methodFilters.length, 2);
-        assert.equal(methodFilters[0], 'foo.url');
-        assert.equal(methodFilters[1], 'baz.url');
+        assert.equal(beforeFilters.length, 2);
+        assert.equal(beforeFilters[0], 'foo.url');
+        assert.equal(beforeFilters[1], 'baz.url');
 
-        webRq.removeListener('onBeforeRequest', listener);
+        webRq.removeListener('onBeforeRequest', listener.id);
 
         // After
-        methodFilters = webRq.getFilters('onBeforeRequest');
-        if (methodFilters) {
+        const afterFilters = webRq.getFilters('onBeforeRequest');
+        if (afterFilters) {
           // @ts-ignore
           assert.equal(globalFilters.size, 2);
           // @ts-ignore
-          assert.equal(methodFilters.length, 1);
-          assert.equal(methodFilters[0], 'baz.url');
+          assert.equal(afterFilters.length, 1);
+          assert.equal(afterFilters[0], 'baz.url');
         } else {
           assert.fail('Map filters was destroyed');
         }
@@ -193,7 +185,7 @@ describe('Listeners & Filters Manipulation', () => {
         assert.equal(globalListeners.size, 2);
         assert.equal(methodListeners.size, 2);
 
-        webRq.removeListener('onBeforeRequest', { urls: [], action: () => {}, context: {} });
+        webRq.removeListener('onBeforeRequest', 'aaabbbzzzzxxxxxx');
 
         // After
         assert.equal(globalListeners.size, 2);

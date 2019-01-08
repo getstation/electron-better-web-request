@@ -1,16 +1,21 @@
 import match from 'match-chrome';
+import uuid from 'uuid/v4';
 
 import {
   IBetterWebRequest,
   WebRequestMethod,
+  URLPattern,
   IFilter,
   IListener,
-  IListenerOptions,
+  IContext,
+  IApplier,
+  IListenerCollection,
 } from './types';
 
-// todo : create a default resolver according specs
-const defaultResolver = () => {
-
+const defaultResolver = (listeners: IApplier[]) => {
+  const sortedListeners = listeners.sort((a, b) => b.context.order - a.context.order);
+  const lastListener = sortedListeners[0];
+  return lastListener.applier();
 };
 
 export default class BetterWebRequest implements IBetterWebRequest {
@@ -18,16 +23,18 @@ export default class BetterWebRequest implements IBetterWebRequest {
 
   private webRequest: any;
 
-  private listeners: Map<string, Set<IListener>>;
-  // todo : use a weak set instead of an array
-  private filters: Map<string, string[]>;
-  private resolvers: Map<string, Function>;
+  private orderIndex: number;
+  private listeners: Map<WebRequestMethod, IListenerCollection>;
+  // todo : use a set instead of an array
+  private filters: Map<WebRequestMethod, Set<URLPattern>>;
+  private resolvers: Map<WebRequestMethod, Function>;
 
   constructor(webRequest: any) {
     if (BetterWebRequest.instance) {
       return BetterWebRequest.instance;
     }
 
+    this.orderIndex = 0;
     this.webRequest = webRequest;
     this.listeners = new Map();
     this.filters = new Map();
@@ -38,57 +45,70 @@ export default class BetterWebRequest implements IBetterWebRequest {
     if (BetterWebRequest.instance) delete BetterWebRequest.instance;
   }
 
-  // Alias for drop in replacement
-  onBeforeRequest(filter: IFilter, action: Function, options: Partial<IListenerOptions> = {})
-  { this.addListener('onBeforeRequest', filter, action, options); }
-  onBeforeSendHeaders(filter: IFilter, action: Function, options: Partial<IListenerOptions> = {})
-  { this.addListener('onBeforeSendHeaders', filter, action, options); }
-  onHeadersReceived(filter: IFilter, action: Function, options: Partial<IListenerOptions> = {})
-  { this.addListener('onHeadersReceived', filter, action, options); }
-  onSendHeaders(filter: IFilter, action: Function, options: Partial<IListenerOptions> = {})
-  { this.addListener('onSendHeaders', filter, action, options); }
-  onResponseStarted(filter: IFilter, action: Function, options: Partial<IListenerOptions> = {})
-  { this.addListener('onResponseStarted', filter, action, options); }
-  onBeforeRedirect(filter: IFilter, action: Function, options: Partial<IListenerOptions> = {})
-  { this.addListener('onBeforeRedirect', filter, action, options); }
-  onCompleted(filter: IFilter, action: Function, options: Partial<IListenerOptions> = {})
-  { this.addListener('onCompleted', filter, action, options); }
-  onErrorOccurred(filter: IFilter, action: Function, options: Partial<IListenerOptions> = {})
-  { this.addListener('onErrorOccurred', filter, action, options); }
+  private get nextIndex() {
+    return this.orderIndex += 1;
+  }
 
-  addListener(method: WebRequestMethod, filter: IFilter, action: Function, context: Partial<IListenerOptions> = {}) {
+  // Alias for drop in replacement
+  onBeforeRequest(filter: IFilter, action: Function, options: Partial<IContext> = {})
+  { return this.addListener('onBeforeRequest', filter, action, options); }
+  onBeforeSendHeaders(filter: IFilter, action: Function, options: Partial<IContext> = {})
+  { return this.addListener('onBeforeSendHeaders', filter, action, options); }
+  onHeadersReceived(filter: IFilter, action: Function, options: Partial<IContext> = {})
+  { return this.addListener('onHeadersReceived', filter, action, options); }
+  onSendHeaders(filter: IFilter, action: Function, options: Partial<IContext> = {})
+  { return this.addListener('onSendHeaders', filter, action, options); }
+  onResponseStarted(filter: IFilter, action: Function, options: Partial<IContext> = {})
+  { return this.addListener('onResponseStarted', filter, action, options); }
+  onBeforeRedirect(filter: IFilter, action: Function, options: Partial<IContext> = {})
+  { return this.addListener('onBeforeRedirect', filter, action, options); }
+  onCompleted(filter: IFilter, action: Function, options: Partial<IContext> = {})
+  { return this.addListener('onCompleted', filter, action, options); }
+  onErrorOccurred(filter: IFilter, action: Function, options: Partial<IContext> = {})
+  { return this.addListener('onErrorOccurred', filter, action, options); }
+
+  addListener(method: WebRequestMethod, filter: IFilter, action: Function, outerContext: Partial<IContext> = {}) {
     const { urls } = filter;
+    const id = uuid();
+    const innerContext = { order: this.nextIndex };
+    const context = { ...outerContext, ...innerContext };
     const listener = {
+      id,
       urls,
       action,
       context,
     };
 
-    // Track this new listener
     if (!this.listeners.has(method)) {
-      this.listeners.set(method, new Set());
+      this.listeners.set(method, new Map());
     }
     // @ts-ignore
-    this.listeners.get(method).add(listener);
+    this.listeners.get(method).set(id, listener);
 
-    // Compute the all inclusive filter
-    const currentFilters = (this.filters.has(method)) ? this.filters.get(method) : [] ;
-    // @ts-ignore
-    const mergedFilters = [...currentFilters, ...urls];
-    this.filters.set(method, mergedFilters);
+    if (!this.filters.has(method)) {
+      this.filters.set(method, new Set());
+    }
+    const currentFilters = this.filters.get(method);
+    for (const url of urls) {
+      // @ts-ignore
+      currentFilters.add(url);
+    }
 
-    // Remake the new hook
-    this.webRequest[method](mergedFilters, this.listenerFactory);
+    // @ts-ignore // Remake the new hook
+    this.webRequest[method]([...currentFilters], this.listenerFactory);
+
+    return listener;
   }
 
-  removeListener(method: WebRequestMethod, listener: IListener) {
+  removeListener(method: WebRequestMethod, id: IListener['id']) {
     const listeners = this.listeners.get(method);
     if (listeners) {
-      // Remove from the map
-      listeners.delete(listener);
-      // Remove url patterns from the global pattern by recreatting the whole list from scratch
+      listeners.delete(id);
       const newFilters = this.mergeFilters(listeners);
       this.filters.set(method, newFilters);
+
+      // Rebind the new hook
+      // todo : rebind it for realz
     }
   }
 
@@ -96,8 +116,15 @@ export default class BetterWebRequest implements IBetterWebRequest {
     return (method) ? this.listeners.get(method) : this.listeners;
   }
 
-  getFilters(method: WebRequestMethod | undefined = undefined) {
-    return (method) ? this.filters.get(method) : this.filters;
+  getFilters<T extends WebRequestMethod | undefined = undefined>(method: T):
+    T extends WebRequestMethod ? Set<URLPattern> | undefined : Map<WebRequestMethod, Set<URLPattern>> {
+    if (!method) {
+      return this.filters;
+    }
+    if (method) {
+      return this.filters.get(method);
+    }
+    throw new Error(`Expected string or number, go.`);
   }
 
   hasCallback(method: WebRequestMethod): boolean {
@@ -122,8 +149,9 @@ export default class BetterWebRequest implements IBetterWebRequest {
   /**
    * Find a subset of listeners that match with a given url
    */
-  matchListeners(url: string, listeners: IListener[]): IListener[] {
-    const subset = listeners.filter(element => {
+  matchListeners(url: string, listeners: IListenerCollection): IListener[] {
+    const arrayListeners = Array.from(listeners.values());
+    const subset = arrayListeners.filter(element => {
       for (const pattern of element.urls) {
         if (match(url, pattern)) return true;
       }
@@ -160,19 +188,18 @@ export default class BetterWebRequest implements IBetterWebRequest {
    * Create all the executions of listeners on the web request (indenpendently)
    * Wrap them so they can be triggered only when needed
    */
-  private processRequests(details: any, requestListeners: any[]): object[] {
-    const prepared = [];
-
+  private processRequests(details: any, requestListeners: IListener[]): IApplier[] {
+    const appliers = [];
     for (const listener of requestListeners) {
       const applier = this.applyListener(details, listener.action);
       const executor = {
         applier,
         context: listener.context,
       };
-      prepared.push(executor);
+      appliers.push(executor);
     }
 
-    return prepared;
+    return appliers;
   }
 
   /**
@@ -191,11 +218,12 @@ export default class BetterWebRequest implements IBetterWebRequest {
     };
   }
 
-  private mergeFilters(listeners: Set<IListener>) {
-    const filters = Array.from(listeners).reduce(
-      (accumulator, value) => [...accumulator, ...value.urls],
-      []
-    );
+  private mergeFilters(listeners: IListenerCollection) {
+    const arrayListeners = Array.from(listeners.values());
+    const filters = arrayListeners.reduce((accumulator, value) => {
+      for (const url of value.urls) accumulator.add(url);
+      return accumulator;
+    }, new Set());
 
     return filters;
   }

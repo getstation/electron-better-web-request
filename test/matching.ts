@@ -3,70 +3,70 @@ import assert from 'assert';
 import BetterWebRequest from '../src/electron-better-web-request';
 
 const foo = {
-  name: 'foo',
+  id: 'foo',
   urls: ['http://*/foo*'],
   action: () => {},
-  context: {},
+  context: { order: 1 },
 };
 
 const bar = {
-  name: 'bar',
+  id: 'bar',
   urls: ['http://*/bar*'],
   action: () => {},
-  context: {},
+  context: { order: 2 },
 };
 
 const baz = {
-  name: 'baz',
+  id: 'baz',
   urls: ['http://*/baz', '*://*.bazile.com'],
   action: () => {},
-  context: {},
+  context: { order: 3 },
 };
 
 const mix = {
-  name: 'mix',
+  id: 'mix',
   urls: ['http://*.hello.*', 'http://*/foo*'],
   action: () => {},
-  context: {},
+  context: { order: 4 },
 };
 
 const mockedWebRequest = {};
 
 describe('Matching Url Patterns', () => {
   it('matches one listener with ONE pattern', () => {
-    const listeners = [foo, bar];
+    const listeners = new Map([['foo', foo], ['bar', bar]]);
     const webRq = new BetterWebRequest(mockedWebRequest);
 
     const res = webRq.matchListeners('http://test/foo', listeners);
     assert.equal(res.length, 1);
     // @ts-ignore
-    assert.equal(res[0].name, 'foo');
+    assert.equal(res[0].id, 'foo');
   });
 
   it('matches one listener with MULTIPLE patterns', () => {
-    const listeners = [mix, bar];
+    const listeners = new Map([['mix', mix], ['bar', bar]]);
     const webRq = new BetterWebRequest(mockedWebRequest);
 
     const res = webRq.matchListeners('http://test.hello.io', listeners);
     assert.equal(res.length, 1);
     // @ts-ignore
-    assert.equal(res[0].name, 'mix');
+    assert.equal(res[0].id, 'mix');
   });
 
   it('matches many listeners when possible', () => {
-    const listeners = [mix, bar, foo];
+    const listeners = new Map([['mix', mix], ['bar', bar], ['foo', foo]]);
     const webRq = new BetterWebRequest(mockedWebRequest);
 
     const res = webRq.matchListeners('http://test/foo', listeners);
     assert.equal(res.length, 2);
     // @ts-ignore
-    assert.equal(res[0].name, 'mix');
+    assert.equal(res[0].id, 'mix');
     // @ts-ignore
-    assert.equal(res[1].name, 'foo');
+    assert.equal(res[1].id, 'foo');
   });
 
   it('filters out all listeners when none matches', () => {
-    const listeners = [bar, baz];
+    const listeners = new Map([['bar', bar], ['baz', baz]]);
     const webRq = new BetterWebRequest(mockedWebRequest);
 
     const res = webRq.matchListeners('http://test/foo', listeners);
@@ -76,12 +76,12 @@ describe('Matching Url Patterns', () => {
   it('handles empty listeners argument', () => {
     const webRq = new BetterWebRequest(mockedWebRequest);
 
-    const res = webRq.matchListeners('http://test/foo', []);
+    const res = webRq.matchListeners('http://test/foo', new Map());
     assert.equal(res.length, 0);
   });
 
   it('handles empty url argument', () => {
-    const listeners = [bar, baz];
+    const listeners = new Map([['bar', bar], ['baz', baz]]);
     const webRq = new BetterWebRequest(mockedWebRequest);
 
     const res = webRq.matchListeners('', listeners);
@@ -89,7 +89,7 @@ describe('Matching Url Patterns', () => {
   });
 
   it('handles incorrect url', () => {
-    const listeners = [bar, baz];
+    const listeners = new Map([['bar', bar], ['baz', baz]]);
     const webRq = new BetterWebRequest(mockedWebRequest);
 
     const res = webRq.matchListeners('yolo', listeners);

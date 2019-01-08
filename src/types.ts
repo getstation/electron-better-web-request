@@ -11,38 +11,54 @@ type WebRequestWithoutCallback =
   'onErrorOccurred';
 
 export type WebRequestMethod = WebRequestWithCallback | WebRequestWithoutCallback;
+export type URLPattern = string;
 
 export interface IFilter {
   urls: string[],
 }
 
 export interface IListener {
+  id: string,
   urls: string[],
   action: Function,
-  context: object,
+  context: IContext,
 }
 
-export interface IListenerOptions {
-  priority: number,
-  origin: string,
+export interface IContext {
+  priority?: number,
+  origin?: string,
+  order: number,
 }
 
-export interface Response {
-  cancel: false,
+export interface IApplier {
+  applier: Function,
+  context: IContext,
 }
+
+export type IListenerCollection = Map<IListener['id'], IListener>;
 
 export interface IBetterWebRequest {
+  onBeforeRequest(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+  onBeforeSendHeaders(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+  onHeadersReceived(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+  onSendHeaders(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+  onResponseStarted(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+  onBeforeRedirect(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+  onCompleted(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+  onErrorOccurred(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+
+  addListener(method: WebRequestMethod, filter: IFilter, action: Function, context: Partial<IContext>): IListener;
+  removeListener(method: WebRequestMethod, id: IListener['id']): void;
+  setConflictResolver(requestMethod: WebRequestMethod, resolver: Function): void;
+
+  getListeners(method?: WebRequestMethod): IListenerCollection | Map<WebRequestMethod, IListenerCollection> | undefined;
+
+  // getFilters(): Map<WebRequestMethod, Set<URLPattern>>;
+  // getFilters(method: WebRequestMethod): Set<URLPattern> | undefined;
+  getFilters<T extends WebRequestMethod | undefined = undefined>(method: T):
+    T extends WebRequestMethod ? Set<URLPattern> | undefined : Map<WebRequestMethod, Set<URLPattern>>
+
   hasCallback(method: WebRequestMethod): Boolean;
 
-  onBeforeRequest(filter: IFilter, action: Function, options: IListenerOptions): void;
-  onBeforeSendHeaders(filter: IFilter, action: Function, options: IListenerOptions): void;
-  onHeadersReceived(filter: IFilter, action: Function, options: IListenerOptions): void;
-  onSendHeaders(filter: IFilter, action: Function, options: IListenerOptions): void;
-  onResponseStarted(filter: IFilter, action: Function, options: IListenerOptions): void;
-  onBeforeRedirect(filter: IFilter, action: Function, options: IListenerOptions): void;
-  onCompleted(filter: IFilter, action: Function, options: IListenerOptions): void;
-  onErrorOccurred(filter: IFilter, action: Function, options: IListenerOptions): void;
-
-  setConflictResolver(requestMethod: WebRequestMethod, resolver: Function): void;
-  matchListeners(url: string, listeners: IListener[]): IListener[];
+  matchListeners(url: string, listeners: IListenerCollection): IListener[];
 }
