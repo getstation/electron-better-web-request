@@ -25,7 +25,6 @@ export default class BetterWebRequest implements IBetterWebRequest {
 
   private orderIndex: number;
   private listeners: Map<WebRequestMethod, IListenerCollection>;
-  // todo : use a set instead of an array
   private filters: Map<WebRequestMethod, Set<URLPattern>>;
   private resolvers: Map<WebRequestMethod, Function>;
 
@@ -47,6 +46,33 @@ export default class BetterWebRequest implements IBetterWebRequest {
 
   private get nextIndex() {
     return this.orderIndex += 1;
+  }
+
+  getListeners() {
+    return this.listeners;
+  }
+
+  getListenersFor(method: WebRequestMethod) {
+    return this.listeners.get(method);
+  }
+
+  getFilters() {
+    return this.filters;
+  }
+
+  getFiltersFor(method: WebRequestMethod) {
+    return this.filters.get(method);
+  }
+
+  hasCallback(method: WebRequestMethod): boolean {
+    switch (method) {
+      case 'onBeforeRequest':
+      case 'onBeforeSendHeaders':
+      case 'onHeadersReceived':
+        return true;
+      default:
+        return false;
+    }
   }
 
   // Alias for drop in replacement
@@ -95,7 +121,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
     }
 
     // @ts-ignore // Remake the new hook
-    this.webRequest[method]([...currentFilters], this.listenerFactory);
+    this.webRequest[method]([...currentFilters], this.listenerFactory.bind(this));
 
     return listener;
   }
@@ -112,32 +138,6 @@ export default class BetterWebRequest implements IBetterWebRequest {
     }
   }
 
-  getListeners(method: WebRequestMethod | undefined = undefined) {
-    return (method) ? this.listeners.get(method) : this.listeners;
-  }
-
-  getFilters<T extends WebRequestMethod | undefined = undefined>(method: T):
-    T extends WebRequestMethod ? Set<URLPattern> | undefined : Map<WebRequestMethod, Set<URLPattern>> {
-    if (!method) {
-      return this.filters;
-    }
-    if (method) {
-      return this.filters.get(method);
-    }
-    throw new Error(`Expected string or number, go.`);
-  }
-
-  hasCallback(method: WebRequestMethod): boolean {
-    switch (method) {
-      case 'onBeforeRequest':
-      case 'onBeforeSendHeaders':
-      case 'onHeadersReceived':
-        return true;
-      default:
-        return false;
-    }
-  }
-
   setConflictResolver(method: WebRequestMethod, resolver: Function) {
     if (this.resolvers.has(method)) {
       // todo : update this as real logger thingy ?
@@ -147,7 +147,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
   }
 
   /**
-   * Find a subset of listeners that match with a given url
+   * Find a subset of listeners that match a given url
    */
   matchListeners(url: string, listeners: IListenerCollection): IListener[] {
     const arrayListeners = Array.from(listeners.values());
@@ -181,6 +181,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
     const requestsProcesses = this.processRequests(details, matchedListeners);
     const modified = resolve(requestsProcesses);
 
+    // todo : callback only when there is a callback ?
     callback(modified);
   }
 
