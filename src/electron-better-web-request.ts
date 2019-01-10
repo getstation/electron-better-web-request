@@ -119,7 +119,6 @@ export default class BetterWebRequest implements IBetterWebRequest {
       // @ts-ignore
       currentFilters.add(url);
     }
-
     // @ts-ignore // Remake the new hook
     this.webRequest[method]([...currentFilters], this.listenerFactory.bind(this));
 
@@ -134,7 +133,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
       this.filters.set(method, newFilters);
 
       // Rebind the new hook
-      // todo : rebind it for realz
+      this.webRequest[method]([...newFilters], this.listenerFactory.bind(this));
     }
   }
 
@@ -157,7 +156,6 @@ export default class BetterWebRequest implements IBetterWebRequest {
       }
       return false;
     });
-
     return subset;
   }
 
@@ -165,24 +163,31 @@ export default class BetterWebRequest implements IBetterWebRequest {
    * Workflow triggered when a web request arrive
    * Use the original listener signature needed by electron.webrequest.onXXXX()
    */
-  private listenerFactory(details: any, callback: Function) {
+  private async listenerFactory(details: any, callback?: Function) {
     // todo : Check that we have access to the method in details, if not : remake a factory
     const method = details.method;
     if (!this.listeners.has(method)) {
-      throw new Error(`No listeners for the requested method ${method}`);
+      this.webRequest[method](null);
+      return;
     }
+
     const listeners = this.listeners.get(method);
     // @ts-ignore
     const matchedListeners = this.matchListeners(details.url, listeners);
+    if (matchedListeners.length === 0) {
+      return;
+    }
 
     let resolve = this.resolvers.get(method);
     if (!resolve) resolve = defaultResolver;
-
     const requestsProcesses = this.processRequests(details, matchedListeners);
-    const modified = resolve(requestsProcesses);
 
-    // todo : callback only when there is a callback ?
-    callback(modified);
+    if (this.hasCallback(method) && callback) {
+      const modified = await resolve(requestsProcesses);
+      callback(modified);
+    } else {
+      requestsProcesses.map(listener => listener.applier());
+    }
   }
 
   /**
@@ -208,15 +213,13 @@ export default class BetterWebRequest implements IBetterWebRequest {
    * Allow to trigger the application only when needed + promisify the execution of this listener
    */
   private applyListener(details: any, listener: Function): Function {
-    return () => {
-      new Promise((resolve, reject) => {
-        try {
-          listener(details, resolve);
-        } catch (err) {
-          reject(err);
-        }
-      });
-    };
+    return () => new Promise((resolve, reject) => {
+      try {
+        listener(details, resolve);
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 
   private mergeFilters(listeners: IListenerCollection) {

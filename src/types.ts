@@ -50,17 +50,11 @@ export interface IBetterWebRequest {
   addListener(method: WebRequestMethod, filter: IFilter, action: Function, context: Partial<IContext>): IListener;
   removeListener(method: WebRequestMethod, id: IListener['id']): void;
   setConflictResolver(requestMethod: WebRequestMethod, resolver: Function): void;
+  matchListeners(url: string, listeners: IListenerCollection): IListener[];
 
   getListeners(): Map<WebRequestMethod, IListenerCollection>;
   getListenersFor(method: WebRequestMethod): IListenerCollection | undefined;
-
   getFilters(): Map<WebRequestMethod, Set<URLPattern>>;
   getFiltersFor(method: WebRequestMethod): Set<URLPattern> | undefined;
-
-  // getFilters<T extends WebRequestMethod | undefined = undefined>(method: T):
-  //   T extends WebRequestMethod ? Set<URLPattern> | undefined : Map<WebRequestMethod, Set<URLPattern>>
-
   hasCallback(method: WebRequestMethod): Boolean;
-
-  matchListeners(url: string, listeners: IListenerCollection): IListener[];
 }
