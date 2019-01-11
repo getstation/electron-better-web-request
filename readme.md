@@ -1,26 +1,26 @@
 # Electron Better Web Request
 
-This module aims to extends the usage of `electron-web-request` by allowing to bind many different listeners to the lifecycle events proposed by Electron. It aligns with the base usage found (here)[https://electronjs.org/docs/api/web-request], but work around (this issue)[https://github.com/electron/electron/issues/10478] by proposing a multi-listeners mecanism.
+This module aims to extends the usage of `electron-web-request` by allowing to bind many different listeners to the lifecycle events proposed by Electron. It aligns with the base usage found [here](https://electronjs.org/docs/api/web-request), but work around [this issue](https://github.com/electron/electron/issues/10478) by proposing a multi-listeners mecanism.
 
-It can be used as a drop in replacement, and only needs to receive the `electron-web-request` as an injected dependency to work indenticaly. If used as is, it will only use the last registered listener for a method, to be retro-compatible. On top of that, the (API)[] offers ways to add / remove listeners, give context to listeners and define a custom merging strategy for all applicable listeners.
+It can be used as a drop in replacement, and only needs to receive the `electron-web-request` as an injected dependency to work indenticaly. If used as is, it will only use the last registered listener for a method, to be retro-compatible. On top of that, the [API]() offers ways to add / remove listeners, give context to listeners and define a custom merging strategy for all applicable listeners.
 
 ## Getting started
 
 ### Install
 
-```
+```bash
 npm install electron-better-web-request
 ```
 
 ### Usage
 
 Override Electron web request
-```
+```js
 defaultSession.webRequest = require('better-electron-web-request')(defaultSession.webRequest)
 ```
 
 Basic drop in replacement
-```
+```js
 const filter = {
   urls: ['https://*.github.com/*', '*://electron.github.io']
 }
@@ -32,7 +32,7 @@ defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
 ```
 
 With merging strategy
-```
+```js
 const filter = {
   urls: ['https://*.github.com/*', '*://electron.github.io']
 }
@@ -57,7 +57,7 @@ default.webRequest.setConflictResolver('onBeforeSendHeaders', (listenerAppliers)
   // Return your final result
 })
 ```
-Check the API details below to see what the array (`listenerAppliers` is made of)[], and check the (default resolver implementation)[] as example.
+Check the API details below to see what the array[`listenerAppliers` is made of](), and check the [default resolver implementation]() as example.
 
 ## API
 
