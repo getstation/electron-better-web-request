@@ -1,1 +1,1 @@
-module.exports = require('./src/electron-better-web-request');
+module.exports = require('./lib/src/electron-better-web-request');

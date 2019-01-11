@@ -1,13 +1,13 @@
 {
-  "name": "@nacryn/electron-better-web-request",
-  "version": "1.0.0",
+  "name": "electron-better-web-request",
+  "version": "0.0.1",
   "description": "Module replacement for electron-web-request",
   "main": "index.js",
-  "private": true,
   "author": "Station <hello@getstation.com>",
   "license": "ISC",
   "scripts": {
-    "test": "mocha -r ts-node/register test/**/*.ts"
+    "test": "mocha -r ts-node/register test/**/*.ts",
+    "prepublish": "rm -rf ./lib/ && tslint -p . && tsc -p ."
   },
   "devDependencies": {
     "@types/mocha": "^5.2.5",
