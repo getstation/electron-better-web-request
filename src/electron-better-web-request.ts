@@ -120,7 +120,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
       currentFilters.add(url);
     }
     // @ts-ignore // Remake the new hook
-    this.webRequest[method]([...currentFilters], this.listenerFactory.bind(this));
+    this.webRequest[method]({ urls: [...currentFilters] }, this.listenerFactory(method));
 
     return listener;
   }
@@ -133,7 +133,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
       this.filters.set(method, newFilters);
 
       // Rebind the new hook
-      this.webRequest[method]([...newFilters], this.listenerFactory.bind(this));
+      this.webRequest[method]([...newFilters], this.listenerFactory(method));
     }
   }
 
@@ -149,9 +149,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
     }
   }
 
-  /**
-   * Find a subset of listeners that match a given url
-   */
+  // Find a subset of listeners that match a given url
   matchListeners(url: string, listeners: IListenerCollection): IListener[] {
     const arrayListeners = Array.from(listeners.values());
     const subset = arrayListeners.filter(element => {
@@ -163,43 +161,41 @@ export default class BetterWebRequest implements IBetterWebRequest {
     return subset;
   }
 
-  /**
-   * Workflow triggered when a web request arrive
-   * Use the original listener signature needed by electron.webrequest.onXXXX()
-   */
-  private async listenerFactory(details: any, callback?: Function) {
-    // todo : Check that we have access to the method in details, if not : remake a factory
-    const method = details.method;
-    if (!this.listeners.has(method)) {
-      this.webRequest[method](null);
-      return;
-    }
+  // Workflow triggered when a web request arrive
+  // Use the original listener signature needed by electron.webrequest.onXXXX()
+  private listenerFactory(methodRequested: WebRequestMethod) {
+    const method = methodRequested;
+    return async (details: any, callback?: Function) => {
+      if (!this.listeners.has(method)) {
+        this.webRequest[method](null);
+        return;
+      }
 
-    const listeners = this.listeners.get(method);
-    // @ts-ignore
-    const matchedListeners = this.matchListeners(details.url, listeners);
-    if (matchedListeners.length === 0) {
-      return;
-    }
+      const listeners = this.listeners.get(method);
+      // @ts-ignore
+      const matchedListeners = this.matchListeners(details.url, listeners);
+      if (matchedListeners.length === 0) {
+        if (callback) callback({ cancel: false });
+        return;
+      }
 
-    let resolve = this.resolvers.get(method);
-    if (!resolve) resolve = defaultResolver;
-    const requestsProcesses = this.processRequests(details, matchedListeners);
+      let resolve = this.resolvers.get(method);
+      if (!resolve) resolve = defaultResolver;
+      const requestsProcesses = this.processRequests(details, matchedListeners);
 
-    if (this.hasCallback(method) && callback) {
-      const modified = await resolve(requestsProcesses);
-      callback(modified);
-    } else {
-      requestsProcesses.map(listener => listener.applier());
-    }
+      if (this.hasCallback(method) && callback) {
+        const modified = await resolve(requestsProcesses);
+        callback(modified);
+      } else {
+        requestsProcesses.map(listener => listener.applier());
+      }
+    };
   }
 
-  /**
-   * Create all the executions of listeners on the web request (indenpendently)
-   * Wrap them so they can be triggered only when needed
-   */
+  // Create all the executions of listeners on the web request (independently)
+  // Wrap them so they can be triggered only when needed
   private processRequests(details: any, requestListeners: IListener[]): IApplier[] {
-    const appliers = [];
+    const appliers: IApplier[] = [];
     for (const listener of requestListeners) {
       const applier = this.applyListener(details, listener.action);
       const executor = {
@@ -212,10 +208,8 @@ export default class BetterWebRequest implements IBetterWebRequest {
     return appliers;
   }
 
-  /**
-   * Factory : make a function that will return a Promise wrapping the execution of the listener
-   * Allow to trigger the application only when needed + promisify the execution of this listener
-   */
+  // Factory : make a function that will return a Promise wrapping the execution of the listener
+  // Allow to trigger the application only when needed + promisify the execution of this listener
   private applyListener(details: any, listener: Function): Function {
     return () => new Promise((resolve, reject) => {
       try {
