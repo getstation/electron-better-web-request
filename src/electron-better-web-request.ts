@@ -138,11 +138,15 @@ export default class BetterWebRequest implements IBetterWebRequest {
   }
 
   setConflictResolver(method: WebRequestMethod, resolver: Function) {
-    if (this.resolvers.has(method)) {
-      // todo : update this as real logger thingy ?
-      console.warn('Overriding resolver on ', method);
+    if (this.hasCallback(method)) {
+      if (this.resolvers.has(method)) {
+        // todo : update this as real logger thingy ?
+        console.warn('Overriding resolver on ', method);
+      }
+      this.resolvers.set(method, resolver);
+    } else {
+      console.warn(`Method ${method} has no callback and does not use a resolver`);
     }
-    this.resolvers.set(method, resolver);
   }
 
   /**
