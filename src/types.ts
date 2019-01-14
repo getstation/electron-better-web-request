@@ -38,17 +38,18 @@ export interface IApplier {
 export type IListenerCollection = Map<IListener['id'], IListener>;
 
 export interface IBetterWebRequest {
-  onBeforeRequest(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+  onBeforeRequest(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
   onBeforeSendHeaders(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
   onHeadersReceived(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
   onSendHeaders(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
   onResponseStarted(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
   onBeforeRedirect(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
   onCompleted(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
-  onErrorOccurred(filter: IFilter, action: Function, options: Partial<IContext>): IListener;
+  onErrorOccurred(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
 
   addListener(method: WebRequestMethod, filter: IFilter, action: Function, context: Partial<IContext>): IListener;
   removeListener(method: WebRequestMethod, id: IListener['id']): void;
+  removeListeners(method: WebRequestMethod): void;
   setConflictResolver(requestMethod: WebRequestMethod, resolver: Function): void;
   matchListeners(url: string, listeners: IListenerCollection): IListener[];
 

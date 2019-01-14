@@ -19,8 +19,6 @@ const defaultResolver = (listeners: IApplier[]) => {
 };
 
 export default class BetterWebRequest implements IBetterWebRequest {
-  private static instance: BetterWebRequest;
-
   private webRequest: any;
 
   private orderIndex: number;
@@ -29,19 +27,11 @@ export default class BetterWebRequest implements IBetterWebRequest {
   private resolvers: Map<WebRequestMethod, Function>;
 
   constructor(webRequest: any) {
-    if (BetterWebRequest.instance) {
-      return BetterWebRequest.instance;
-    }
-
     this.orderIndex = 0;
     this.webRequest = webRequest;
     this.listeners = new Map();
     this.filters = new Map();
     this.resolvers = new Map();
-  }
-
-  public static reset() {
-    if (BetterWebRequest.instance) delete BetterWebRequest.instance;
   }
 
   private get nextIndex() {
@@ -78,23 +68,65 @@ export default class BetterWebRequest implements IBetterWebRequest {
   // Alias for drop in replacement
   onBeforeRequest(filter: IFilter, action: Function, options: Partial<IContext> = {})
   { return this.addListener('onBeforeRequest', filter, action, options); }
+
   onBeforeSendHeaders(filter: IFilter, action: Function, options: Partial<IContext> = {})
   { return this.addListener('onBeforeSendHeaders', filter, action, options); }
+
   onHeadersReceived(filter: IFilter, action: Function, options: Partial<IContext> = {})
   { return this.addListener('onHeadersReceived', filter, action, options); }
+
   onSendHeaders(filter: IFilter, action: Function, options: Partial<IContext> = {})
   { return this.addListener('onSendHeaders', filter, action, options); }
+
   onResponseStarted(filter: IFilter, action: Function, options: Partial<IContext> = {})
   { return this.addListener('onResponseStarted', filter, action, options); }
+
   onBeforeRedirect(filter: IFilter, action: Function, options: Partial<IContext> = {})
   { return this.addListener('onBeforeRedirect', filter, action, options); }
+
   onCompleted(filter: IFilter, action: Function, options: Partial<IContext> = {})
   { return this.addListener('onCompleted', filter, action, options); }
-  onErrorOccurred(filter: IFilter, action: Function, options: Partial<IContext> = {})
-  { return this.addListener('onErrorOccurred', filter, action, options); }
 
-  addListener(method: WebRequestMethod, filter: IFilter, action: Function, outerContext: Partial<IContext> = {}) {
-    const { urls } = filter;
+  onErrorOccurred(...parameters: any) {
+    const method = 'onErrorOccurred';
+    const args = this.parseArguments(parameters);
+    return (args.unbind)
+      ? this.removeListeners(method)
+      : this.addListener(method, args.filter, args.action, args.options);
+  }
+
+  parseArguments(parameters: any): object {
+    const args = {
+      unbind: false,
+      filter: ['<all_urls>'],
+      action: null,
+      options: {},
+    };
+
+    switch (parameters.length) {
+      case 0 :
+        args.unbind = true;
+        break;
+
+      case 1 :
+        if (typeof(parameters[0]) === 'function') {
+          args.action = parameters[0];
+        } else {
+          throw new Error('No function listener given');
+        }
+        break;
+
+      case 2 :
+        break;
+      default :
+        throw new Error('Too many arguments');
+    }
+
+    return args;
+  }
+
+  addListener(method: WebRequestMethod, filter: IFilter | null = null, action: Function, outerContext: Partial<IContext> = {}) {
+    const urls = (filter) ? filter.urls : ['<all_urls>'];
     const id = uuid();
     const innerContext = { order: this.nextIndex };
     const context = { ...outerContext, ...innerContext };
@@ -127,14 +159,25 @@ export default class BetterWebRequest implements IBetterWebRequest {
 
   removeListener(method: WebRequestMethod, id: IListener['id']) {
     const listeners = this.listeners.get(method);
-    if (listeners) {
-      listeners.delete(id);
+    if (!listeners || listeners.size === 0) {
+      return;
+    }
+
+    listeners.delete(id);
+
+    if (listeners.size === 0) {
+      this.webRequest[method](null);
+    } else {
       const newFilters = this.mergeFilters(listeners);
       this.filters.set(method, newFilters);
 
       // Rebind the new hook
       this.webRequest[method]([...newFilters], this.listenerFactory(method));
     }
+  }
+
+  removeListeners(method: WebRequestMethod) {
+    this.webRequest[method](null);
   }
 
   setConflictResolver(method: WebRequestMethod, resolver: Function) {

@@ -12,7 +12,7 @@ describe('Electron Better Web Request', () => {
     const mockedWebRequest = {
       onBeforeRequest: (filters: any, listenerFactory: any) => {
         // Just assert the filters
-        assert.equal(filters[0], 'test.url');
+        assert.equal(filters.urls[0], 'test.url');
         // Then trigger the listenerFactory, mimicking a instant trigger
         listenerFactory(
           { result : 'failure', method : 'onBeforeRequest', url: 'test.url' },
@@ -29,9 +29,7 @@ describe('Electron Better Web Request', () => {
 
     // Add the listener
     const webRq = new BetterWebRequest(mockedWebRequest);
-    assert.doesNotThrow(() => {
-      webRq.addListener('onBeforeRequest', { urls: ['test.url'] }, fakeListener, { origin: 'EXEC' });
-    });
+    webRq.addListener('onBeforeRequest', { urls: ['test.url'] }, fakeListener, { origin: 'EXEC' });
 
     // Pray
   });
