@@ -31,7 +31,7 @@ export interface IContext {
 }
 
 export interface IApplier {
-  applier: Function,
+  apply: Function,
   context: IContext,
 }
 
@@ -49,8 +49,8 @@ export interface IBetterWebRequest {
 
   addListener(method: WebRequestMethod, filter: IFilter, action: Function, context: Partial<IContext>): IListener;
   removeListener(method: WebRequestMethod, id: IListener['id']): void;
-  removeListeners(method: WebRequestMethod): void;
-  setConflictResolver(requestMethod: WebRequestMethod, resolver: Function): void;
+  clearListeners(method: WebRequestMethod): void;
+  setResolver(requestMethod: WebRequestMethod, resolver: Function): void;
   matchListeners(url: string, listeners: IListenerCollection): IListener[];
 
   getListeners(): Map<WebRequestMethod, IListenerCollection>;

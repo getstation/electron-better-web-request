@@ -50,7 +50,7 @@ describe('Resolver', () => {
 
     // Set a custom resolver, then add a listener to mock the trigger & call
     const webRq = new BetterWebRequest(mockedWebRequest);
-    webRq.setConflictResolver('onBeforeRequest', () => {
+    webRq.setResolver('onBeforeRequest', () => {
       assert.ok(true, 'Custom resolver has been called');
     });
     webRq.addListener('onBeforeRequest', { urls: ['*://test.com/'] }, fakeListener, { origin: 'FOO' });

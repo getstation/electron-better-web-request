@@ -13,9 +13,9 @@ import {
 } from './types';
 
 const defaultResolver = (listeners: IApplier[]) => {
-  const sortedListeners = listeners.sort((a, b) => b.context.order - a.context.order);
-  const lastListener = sortedListeners[0];
-  return lastListener.applier();
+  const sorted = listeners.sort((a, b) => b.context.order - a.context.order);
+  const last = sorted[0];
+  return last.apply();
 };
 
 export default class BetterWebRequest implements IBetterWebRequest {
@@ -114,16 +114,173 @@ export default class BetterWebRequest implements IBetterWebRequest {
     return this.identifyAction(method, args);
   }
 
-  identifyAction(method: WebRequestMethod, args: any) {
+  addListener(method: WebRequestMethod, filter: IFilter, action: Function, outerContext: Partial<IContext> = {}) {
+    const { urls } = filter;
+    const id = uuid();
+    const innerContext = { order: this.nextIndex };
+    const context = { ...outerContext, ...innerContext };
+    const listener = {
+      id,
+      urls,
+      action,
+      context,
+    };
+
+    if (!this.listeners.has(method)) {
+      this.listeners.set(method, new Map());
+    }
+    const listeners = this.listeners.get(method);
+    if (!listeners) throw new Error('Listeners Map has not been properly initialized');
+    listeners.set(id, listener);
+
+    if (!this.filters.has(method)) {
+      this.filters.set(method, new Set());
+    }
+    const currentFilters = this.filters.get(method);
+    if (!currentFilters) throw new Error('Filters Set has not been properly initialized');
+    for (const url of urls) {
+      currentFilters.add(url);
+    }
+
+    // Remake the new hook
+    this.webRequest[method]({ urls: [...currentFilters] }, this.listenerFactory(method));
+
+    return listener;
+  }
+
+  removeListener(method: WebRequestMethod, id: IListener['id']) {
+    const listeners = this.listeners.get(method);
+    if (!listeners || !listeners.has(id)) {
+      return;
+    }
+
+    if (listeners.size === 1) {
+      this.clearListeners(method);
+    } else {
+      listeners.delete(id);
+      const newFilters = this.mergeFilters(listeners);
+      this.filters.set(method, newFilters);
+
+      // Rebind the new hook
+      this.webRequest[method]([...newFilters], this.listenerFactory(method));
+    }
+  }
+
+  clearListeners(method: WebRequestMethod) {
+    const listeners = this.listeners.get(method);
+    const filters = this.filters.get(method);
+
+    if (listeners) listeners.clear();
+    if (filters) filters.clear();
+
+    this.webRequest[method](null);
+  }
+
+  setResolver(method: WebRequestMethod, resolver: Function) {
+    if (this.hasCallback(method)) {
+      if (this.resolvers.has(method)) {
+        console.warn('Overriding resolver on ', method);
+      }
+      this.resolvers.set(method, resolver);
+    } else {
+      console.warn(`Method ${method} has no callback and does not use a resolver`);
+    }
+  }
+
+  // Find a subset of listeners that match a given url
+  matchListeners(url: string, listeners: IListenerCollection): IListener[] {
+    const arrayListeners = Array.from(listeners.values());
+    const subset = arrayListeners.filter(element => {
+      for (const pattern of element.urls) {
+        if (match(pattern, url)) return true;
+      }
+      return false;
+    });
+    return subset;
+  }
+
+  // Workflow triggered when a web request arrive
+  // Use the original listener signature needed by electron.webrequest.onXXXX()
+  private listenerFactory(method: WebRequestMethod) {
+    return async (details: any, callback?: Function) => {
+      if (!this.listeners.has(method)) {
+        this.webRequest[method](null);
+        return;
+      }
+
+      const listeners = this.listeners.get(method);
+      if (!listeners) {
+        if (callback) callback({ cancel : false });
+        return;
+      }
+
+      const matchedListeners = this.matchListeners(details.url, listeners);
+      if (matchedListeners.length === 0) {
+        if (callback) callback({ cancel: false });
+        return;
+      }
+
+      let resolve = this.resolvers.get(method);
+      if (!resolve) resolve = defaultResolver;
+      const requestsProcesses = this.processRequests(details, matchedListeners);
+
+      if (this.hasCallback(method) && callback) {
+        const modified = await resolve(requestsProcesses);
+        callback(modified);
+      } else {
+        requestsProcesses.map(listener => listener.apply());
+      }
+    };
+  }
+
+  // Create all the executions of listeners on the web request (independently)
+  // Wrap them so they can be triggered only when needed
+  private processRequests(details: any, requestListeners: IListener[]): IApplier[] {
+    const appliers: IApplier[] = [];
+    for (const listener of requestListeners) {
+      const apply = this.makeApplier(details, listener.action);
+      const executor = {
+        apply,
+        context: listener.context,
+      };
+      appliers.push(executor);
+    }
+
+    return appliers;
+  }
+
+  // Factory : make a function that will return a Promise wrapping the execution of the listener
+  // Allow to trigger the application only when needed + promisify the execution of this listener
+  private makeApplier(details: any, listener: Function): Function {
+    return () => new Promise((resolve, reject) => {
+      try {
+        listener(details, resolve);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  private mergeFilters(listeners: IListenerCollection) {
+    const arrayListeners = Array.from(listeners.values());
+    const filters = arrayListeners.reduce((accumulator, value) => {
+      for (const url of value.urls) accumulator.add(url);
+      return accumulator;
+    }, new Set());
+
+    return filters;
+  }
+
+  private identifyAction(method: WebRequestMethod, args: any) {
     return (args.unbind)
-    ? this.removeListeners(method)
+    ? this.clearListeners(method)
     : this.addListener(method, args.filter, args.action, args.options);
   }
 
-  parseArguments(parameters: any): object {
+  private parseArguments(parameters: any): object {
     const args = {
       unbind: false,
-      filter: ['<all_urls>'],
+      filter: { urls: ['<all_urls>'] },
       action: null,
       options: {},
     };
@@ -171,153 +328,5 @@ export default class BetterWebRequest implements IBetterWebRequest {
     }
 
     return args;
-  }
-
-  addListener(method: WebRequestMethod, filter: IFilter, action: Function, outerContext: Partial<IContext> = {}) {
-    const { urls } = filter;
-    const id = uuid();
-    const innerContext = { order: this.nextIndex };
-    const context = { ...outerContext, ...innerContext };
-    const listener = {
-      id,
-      urls,
-      action,
-      context,
-    };
-
-    if (!this.listeners.has(method)) {
-      this.listeners.set(method, new Map());
-    }
-    // @ts-ignore
-    this.listeners.get(method).set(id, listener);
-
-    if (!this.filters.has(method)) {
-      this.filters.set(method, new Set());
-    }
-    const currentFilters = this.filters.get(method);
-    for (const url of urls) {
-      // @ts-ignore
-      currentFilters.add(url);
-    }
-    // @ts-ignore // Remake the new hook
-    this.webRequest[method]({ urls: [...currentFilters] }, this.listenerFactory(method));
-
-    return listener;
-  }
-
-  removeListener(method: WebRequestMethod, id: IListener['id']) {
-    const listeners = this.listeners.get(method);
-    if (!listeners || listeners.size === 0) {
-      return;
-    }
-
-    listeners.delete(id);
-
-    if (listeners.size === 0) {
-      this.webRequest[method](null);
-    } else {
-      const newFilters = this.mergeFilters(listeners);
-      this.filters.set(method, newFilters);
-
-      // Rebind the new hook
-      this.webRequest[method]([...newFilters], this.listenerFactory(method));
-    }
-  }
-
-  removeListeners(method: WebRequestMethod) {
-    this.webRequest[method](null);
-  }
-
-  setConflictResolver(method: WebRequestMethod, resolver: Function) {
-    if (this.hasCallback(method)) {
-      if (this.resolvers.has(method)) {
-        // todo : update this as real logger thingy ?
-        console.warn('Overriding resolver on ', method);
-      }
-      this.resolvers.set(method, resolver);
-    } else {
-      console.warn(`Method ${method} has no callback and does not use a resolver`);
-    }
-  }
-
-  // Find a subset of listeners that match a given url
-  matchListeners(url: string, listeners: IListenerCollection): IListener[] {
-    const arrayListeners = Array.from(listeners.values());
-    const subset = arrayListeners.filter(element => {
-      for (const pattern of element.urls) {
-        if (match(pattern, url)) return true;
-      }
-      return false;
-    });
-    return subset;
-  }
-
-  // Workflow triggered when a web request arrive
-  // Use the original listener signature needed by electron.webrequest.onXXXX()
-  private listenerFactory(methodRequested: WebRequestMethod) {
-    const method = methodRequested;
-    return async (details: any, callback?: Function) => {
-      if (!this.listeners.has(method)) {
-        this.webRequest[method](null);
-        return;
-      }
-
-      const listeners = this.listeners.get(method);
-      // @ts-ignore
-      const matchedListeners = this.matchListeners(details.url, listeners);
-      if (matchedListeners.length === 0) {
-        if (callback) callback({ cancel: false });
-        return;
-      }
-
-      let resolve = this.resolvers.get(method);
-      if (!resolve) resolve = defaultResolver;
-      const requestsProcesses = this.processRequests(details, matchedListeners);
-
-      if (this.hasCallback(method) && callback) {
-        const modified = await resolve(requestsProcesses);
-        callback(modified);
-      } else {
-        requestsProcesses.map(listener => listener.applier());
-      }
-    };
-  }
-
-  // Create all the executions of listeners on the web request (independently)
-  // Wrap them so they can be triggered only when needed
-  private processRequests(details: any, requestListeners: IListener[]): IApplier[] {
-    const appliers: IApplier[] = [];
-    for (const listener of requestListeners) {
-      const applier = this.applyListener(details, listener.action);
-      const executor = {
-        applier,
-        context: listener.context,
-      };
-      appliers.push(executor);
-    }
-
-    return appliers;
-  }
-
-  // Factory : make a function that will return a Promise wrapping the execution of the listener
-  // Allow to trigger the application only when needed + promisify the execution of this listener
-  private applyListener(details: any, listener: Function): Function {
-    return () => new Promise((resolve, reject) => {
-      try {
-        listener(details, resolve);
-      } catch (err) {
-        reject(err);
-      }
-    });
-  }
-
-  private mergeFilters(listeners: IListenerCollection) {
-    const arrayListeners = Array.from(listeners.values());
-    const filters = arrayListeners.reduce((accumulator, value) => {
-      for (const url of value.urls) accumulator.add(url);
-      return accumulator;
-    }, new Set());
-
-    return filters;
   }
 }
