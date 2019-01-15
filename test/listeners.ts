@@ -12,7 +12,6 @@ const mockedWebRequest = {
 
 describe('Listeners & Filters Manipulation', () => {
   describe('Getting', () => {
-    BetterWebRequest.reset();
     const webRq = new BetterWebRequest(mockedWebRequest);
     webRq.addListener('onBeforeRequest', { urls: ['foo.url'] }, () => {}, { origin: 'FOO' });
     webRq.addListener('onBeforeSendHeaders', { urls: ['bar.url'] }, () => {}, { origin: 'BAR' });
@@ -65,10 +64,6 @@ describe('Listeners & Filters Manipulation', () => {
   });
 
   describe('Adding', () => {
-    beforeEach(() => {
-      BetterWebRequest.reset();
-    });
-
     it('adds a listener under the correct method type', () => {
       const webRq = new BetterWebRequest(mockedWebRequest);
       webRq.addListener('onBeforeRequest', { urls: ['test.url'] }, () => {}, { origin: 'TEST' });
@@ -147,7 +142,6 @@ describe('Listeners & Filters Manipulation', () => {
     let listener: IListener;
 
     beforeEach(() => {
-      BetterWebRequest.reset();
       webRq = new BetterWebRequest(mockedWebRequest);
       listener = webRq.addListener('onBeforeRequest', { urls: ['foo.url'] }, () => {}, { origin: 'FOO' });
       webRq.addListener('onBeforeRequest', { urls: ['baz.url'] }, () => {}, { origin: 'BAZ' });

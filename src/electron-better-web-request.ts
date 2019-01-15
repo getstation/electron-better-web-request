@@ -1,4 +1,4 @@
-import match from 'match-chrome';
+import match from 'url-match-patterns';
 import uuid from 'uuid/v4';
 
 import {
@@ -66,33 +66,58 @@ export default class BetterWebRequest implements IBetterWebRequest {
   }
 
   // Alias for drop in replacement
-  onBeforeRequest(filter: IFilter, action: Function, options: Partial<IContext> = {})
-  { return this.addListener('onBeforeRequest', filter, action, options); }
+  onBeforeRequest(...parameters: any) {
+    const method = 'onBeforeRequest';
+    const args = this.parseArguments(parameters);
+    return this.identifyAction(method, args);
+  }
 
-  onBeforeSendHeaders(filter: IFilter, action: Function, options: Partial<IContext> = {})
-  { return this.addListener('onBeforeSendHeaders', filter, action, options); }
+  onBeforeSendHeaders(...parameters: any) {
+    const method = 'onBeforeSendHeaders';
+    const args = this.parseArguments(parameters);
+    return this.identifyAction(method, args);
+  }
 
-  onHeadersReceived(filter: IFilter, action: Function, options: Partial<IContext> = {})
-  { return this.addListener('onHeadersReceived', filter, action, options); }
+  onHeadersReceived(...parameters: any) {
+    const method = 'onHeadersReceived';
+    const args = this.parseArguments(parameters);
+    return this.identifyAction(method, args);
+  }
 
-  onSendHeaders(filter: IFilter, action: Function, options: Partial<IContext> = {})
-  { return this.addListener('onSendHeaders', filter, action, options); }
+  onSendHeaders(...parameters: any) {
+    const method = 'onSendHeaders';
+    const args = this.parseArguments(parameters);
+    return this.identifyAction(method, args);
+  }
 
-  onResponseStarted(filter: IFilter, action: Function, options: Partial<IContext> = {})
-  { return this.addListener('onResponseStarted', filter, action, options); }
+  onResponseStarted(...parameters: any) {
+    const method = 'onResponseStarted';
+    const args = this.parseArguments(parameters);
+    return this.identifyAction(method, args);
+  }
 
-  onBeforeRedirect(filter: IFilter, action: Function, options: Partial<IContext> = {})
-  { return this.addListener('onBeforeRedirect', filter, action, options); }
+  onBeforeRedirect(...parameters: any) {
+    const method = 'onBeforeRedirect';
+    const args = this.parseArguments(parameters);
+    return this.identifyAction(method, args);
+  }
 
-  onCompleted(filter: IFilter, action: Function, options: Partial<IContext> = {})
-  { return this.addListener('onCompleted', filter, action, options); }
+  onCompleted(...parameters: any) {
+    const method = 'onCompleted';
+    const args = this.parseArguments(parameters);
+    return this.identifyAction(method, args);
+  }
 
   onErrorOccurred(...parameters: any) {
     const method = 'onErrorOccurred';
     const args = this.parseArguments(parameters);
+    return this.identifyAction(method, args);
+  }
+
+  identifyAction(method: WebRequestMethod, args: any) {
     return (args.unbind)
-      ? this.removeListeners(method)
-      : this.addListener(method, args.filter, args.action, args.options);
+    ? this.removeListeners(method)
+    : this.addListener(method, args.filter, args.action, args.options);
   }
 
   parseArguments(parameters: any): object {
@@ -109,24 +134,47 @@ export default class BetterWebRequest implements IBetterWebRequest {
         break;
 
       case 1 :
-        if (typeof(parameters[0]) === 'function') {
+        if (typeof parameters[0] === 'function') {
           args.action = parameters[0];
-        } else {
-          throw new Error('No function listener given');
+          break;
         }
-        break;
+
+        throw new Error('Wrong function signature : No function listener given');
 
       case 2 :
-        break;
+        if (typeof parameters[0] === 'object' && typeof parameters[1] === 'function') {
+          args.filter = parameters[0];
+          args.action = parameters[1];
+          break;
+        }
+
+        if (typeof parameters[0] === 'function') {
+          args.action = parameters[0];
+          args.options = parameters[1];
+          break;
+        }
+
+        throw new Error('Wrong function signature : argument 1 should be an object filters or the function listener');
+
+      case 3 :
+        if (typeof parameters[0] === 'object' && typeof parameters[1] === 'function') {
+          args.filter = parameters[0];
+          args.action = parameters[1];
+          args.options = parameters[3];
+          break;
+        }
+
+        throw new Error('Wrong function signature : should be arg 1 -> filter object, arg 2 -> function listener, arg 3 -> options');
+
       default :
-        throw new Error('Too many arguments');
+        throw new Error('Wrong function signature : Too many arguments');
     }
 
     return args;
   }
 
-  addListener(method: WebRequestMethod, filter: IFilter | null = null, action: Function, outerContext: Partial<IContext> = {}) {
-    const urls = (filter) ? filter.urls : ['<all_urls>'];
+  addListener(method: WebRequestMethod, filter: IFilter, action: Function, outerContext: Partial<IContext> = {}) {
+    const { urls } = filter;
     const id = uuid();
     const innerContext = { order: this.nextIndex };
     const context = { ...outerContext, ...innerContext };
@@ -197,7 +245,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
     const arrayListeners = Array.from(listeners.values());
     const subset = arrayListeners.filter(element => {
       for (const pattern of element.urls) {
-        if (match(url, pattern)) return true;
+        if (match(pattern, url)) return true;
       }
       return false;
     });

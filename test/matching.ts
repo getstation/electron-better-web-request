@@ -18,14 +18,14 @@ const bar = {
 
 const baz = {
   id: 'baz',
-  urls: ['http://*/baz', '*://*.bazile.com'],
+  urls: ['http://*/baz', '*://*.bazile.com/'],
   action: () => {},
   context: { order: 3 },
 };
 
 const mix = {
   id: 'mix',
-  urls: ['http://*.hello.*', 'http://*/foo*'],
+  urls: ['http://*.hello.com/', 'http://*/foo*'],
   action: () => {},
   context: { order: 4 },
 };
@@ -47,7 +47,7 @@ describe('Matching Url Patterns', () => {
     const listeners = new Map([['mix', mix], ['bar', bar]]);
     const webRq = new BetterWebRequest(mockedWebRequest);
 
-    const res = webRq.matchListeners('http://test.hello.io', listeners);
+    const res = webRq.matchListeners('http://test.hello.com', listeners);
     assert.equal(res.length, 1);
     // @ts-ignore
     assert.equal(res[0].id, 'mix');

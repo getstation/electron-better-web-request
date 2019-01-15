@@ -14,7 +14,7 @@ describe('Resolver', () => {
           // Then trigger the listenerFactory, mimicking a instant trigger
           trigger.on('on-before-request', () => {
             listenerFactory(
-              { result : 'failure', method : 'onBeforeRequest', url: 'test.url' },
+              { result : 'failure', method : 'onBeforeRequest', url: 'http://test.com' },
               (response: any) => assert.equal(response.result, 'BAZ')
             );
           });
@@ -32,9 +32,9 @@ describe('Resolver', () => {
       // Add listeners
       const webRq = new BetterWebRequest(mockedWebRequest);
       assert.doesNotThrow(() => {
-        webRq.addListener('onBeforeRequest', { urls: ['test.url'] }, fakeListenerFoo, { origin: 'FOO' });
-        webRq.addListener('onBeforeRequest', { urls: ['test.url'] }, fakeListenerBar, { origin: 'BAR' });
-        webRq.addListener('onBeforeRequest', { urls: ['test.url'] }, fakeListenerBaz, { origin: 'BAZ' });
+        webRq.addListener('onBeforeRequest', { urls: ['*://test.com/'] }, fakeListenerFoo, { origin: 'FOO' });
+        webRq.addListener('onBeforeRequest', { urls: ['*://test.com/'] }, fakeListenerBar, { origin: 'BAR' });
+        webRq.addListener('onBeforeRequest', { urls: ['*://test.com/'] }, fakeListenerBaz, { origin: 'BAZ' });
       });
 
       // Pray
@@ -53,6 +53,6 @@ describe('Resolver', () => {
     webRq.setConflictResolver('onBeforeRequest', () => {
       assert.ok(true, 'Custom resolver has been called');
     });
-    webRq.addListener('onBeforeRequest', { urls: ['test.url'] }, fakeListener, { origin: 'FOO' });
+    webRq.addListener('onBeforeRequest', { urls: ['*://test.com/'] }, fakeListener, { origin: 'FOO' });
   });
 });

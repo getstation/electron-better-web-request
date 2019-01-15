@@ -3,19 +3,15 @@ import assert = require('assert');
 import BetterWebRequest from '../src/electron-better-web-request';
 
 describe('Electron Better Web Request', () => {
-  beforeEach(() => {
-    BetterWebRequest.reset();
-  });
-
   it('executes', () => {
     // Mock the function that registers a listener in electron-web-request (and triggers it)
     const mockedWebRequest = {
       onBeforeRequest: (filters: any, listenerFactory: any) => {
         // Just assert the filters
-        assert.equal(filters.urls[0], 'test.url');
+        assert.equal(filters.urls[0], '*://test.url/');
         // Then trigger the listenerFactory, mimicking a instant trigger
         listenerFactory(
-          { result : 'failure', method : 'onBeforeRequest', url: 'test.url' },
+          { result : 'failure', method : 'onBeforeRequest', url: 'http://test.url' },
           (response: any) => assert.equal(response.result, 'success')
         );
       },
@@ -29,7 +25,7 @@ describe('Electron Better Web Request', () => {
 
     // Add the listener
     const webRq = new BetterWebRequest(mockedWebRequest);
-    webRq.addListener('onBeforeRequest', { urls: ['test.url'] }, fakeListener, { origin: 'EXEC' });
+    webRq.addListener('onBeforeRequest', { urls: ['*://test.url/'] }, fakeListener, { origin: 'EXEC' });
 
     // Pray
   });
@@ -53,7 +49,7 @@ describe('Electron Better Web Request', () => {
 
     // Add the listener
     const webRq = new BetterWebRequest(mockedWebRequest);
-    webRq.addListener('onSendHeaders', { urls: ['http://*.url'] }, fakeListener, { origin: 'NO CALLBACK' });
+    webRq.addListener('onSendHeaders', { urls: ['http://*.url/'] }, fakeListener, { origin: 'NO CALLBACK' });
   });
 
   it('does not executes when no listeners matches the url', () => {
@@ -72,7 +68,7 @@ describe('Electron Better Web Request', () => {
 
     // Add the listener
     const webRq = new BetterWebRequest(mockedWebRequest);
-    webRq.addListener('onBeforeRequest', { urls: ['http://*.different'] }, fakeListener, { origin: 'NO CALLBACK' });
+    webRq.addListener('onBeforeRequest', { urls: ['http://*.different/'] }, fakeListener, { origin: 'NO CALLBACK' });
   });
 
   it('unsubscribes when no listeners at all are registered for a method', () => {
@@ -102,6 +98,6 @@ describe('Electron Better Web Request', () => {
 
     // Add the listener to the first method
     const webRq = new BetterWebRequest(mockedWebRequest);
-    webRq.addListener('onBeforeRequest', { urls: ['http://*.different'] }, fakeListener, { origin: 'NO CALLBACK' });
+    webRq.addListener('onBeforeRequest', { urls: ['http://*.different/'] }, fakeListener, { origin: 'NO CALLBACK' });
   });
 });

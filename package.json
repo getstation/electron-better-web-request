@@ -20,7 +20,7 @@
     "typescript": "^3.2.2"
   },
   "dependencies": {
-    "match-chrome": "^1.0.0",
+    "url-match-patterns": "^0.2.0",
     "uuid": "^3.3.2"
   }
 }
