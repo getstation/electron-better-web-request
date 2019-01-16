@@ -1,6 +1,6 @@
 {
   "name": "electron-better-web-request",
-  "version": "0.0.1",
+  "version": "1.0.0-rc1",
   "description": "Module replacement for electron-web-request",
   "main": "index.js",
   "author": "Station <hello@getstation.com>",
