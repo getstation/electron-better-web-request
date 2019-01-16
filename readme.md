@@ -14,15 +14,15 @@ npm install electron-better-web-request
 
 ### Usage
 
-Override Electron web request
+**Override Electron web request**
 ```js
-enhanceWebRequest(session);
+enhanceWebRequest(session)
 ```
 Calling `enhanceWebRequest()` with the target `session` will override its `webRequest` with this module. From there, you can keep using it as usual, with all the new benefits.
 
 *⚠ Note :* If you call `enchanceWebRequest` on a session that has already been enhanced, it will NOT override again the module, preserving all the listeners that you previously registered.
 
-Basic drop in replacement
+**Basic drop in replacement**
 ```js
 const filter = {
   urls: ['https://*.github.com/*', '*://electron.github.io']
@@ -34,7 +34,7 @@ session.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
 })
 ```
 
-With merging strategy
+**With merging strategy**
 ```js
 const filter = {
   urls: ['https://*.github.com/*', '*://electron.github.io']
@@ -54,16 +54,16 @@ session.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
 [...]
 
 // ... then define a resolver with your own strategy
-default.webRequest.setResolver('onBeforeSendHeaders', (listeners) => {
+session.webRequest.setResolver('onBeforeSendHeaders', (listeners) => {
   // "listeners" is an array of objects representing matching listeners for the current web request
   // Use context and results to decide what to execute and how to merge
   // Return your final result
   
   // Example : Default resolver implementation
   // -> modify the web request only with the last registered listener
-  const sorted = listeners.sort((a, b) => b.context.order - a.context.order);
-  const last = sorted[0];
-  return last.apply();
+  const sorted = listeners.sort((a, b) => b.context.order - a.context.order)
+  const last = sorted[0]
+  return last.apply()
 })
 ```
 Check the API details below to see what the array [`listeners` is made of]().
@@ -77,9 +77,9 @@ All the original web request methods are available :
 With callback : `onBeforeRequest` `onBeforeSendHeaders` `onHeadersReceived`  
 Without callback : `onSendHeaders` `onResponseStarted` `onBeforeRedirect` `onCompleted` `onErrorOccurred`
 
-The all use the same original signature, plus an additional (and optional) set of options :
+The all use the same original signature, plus an additional (and optional) set of options. See an example below for `onBeforeRequest` :
 
-**`onBeforeRequest([filters ,] listener, [options])`**
+**`onBeforeRequest([filters ,] listener, [context])`**
 
 - `filters` *Object* (optional)
   - `urls` *string[]* : Array of URL patterns that will be used to filter out the requests that do not match the URL patterns.
@@ -88,11 +88,11 @@ The all use the same original signature, plus an additional (and optional) set o
 
 - `listener` *Function*  
   This function will be called with `listener(details, [callback])` when the API's event has happened :
-  - `details` object describes the request
-  - `listener` is passed with a `callback` (for certain events only, cf with/without callback), which should be called with a `response` object when listener has done its work.
+  - `details` *Object* : describes the request
+  - `listener` *Function* : is passed with a `callback` (for certain events only, cf with/without callback), which should be called with a `response` object when listener has done its work.
 
-- `options` *Object* (optional)  
-  This object can hold any options you wish to be associated with your `listener`. They will be tied to its context and can be used later on in your resolver strategy (cf `setResolver()` below).
+- `context` *Object* (optional)  
+  This object can hold any informations you wish to be associated with your `listener`. They will be tied to its context and can be used later on in your resolver strategy (cf [`setResolver()`]() below).
 
 ---
 For more details about `filters` or `listener` please refer to [Electron Web Request documentation](https://electronjs.org/docs/api/web-request).
@@ -101,71 +101,105 @@ For more details about `filters` or `listener` please refer to [Electron Web Req
 
 To extend the behavior of web requests listeners, the module adds the following methods :
 
-**`addListener(method, filter, listener, context)`**
+**`addListener(method, filter, action, [context])`**
 - `method` *string*  
-  The name of the targeted method (onBeforeRequest, onCompleted, etc.)  
+  Name of the targeted method event (onBeforeRequest, onCompleted, etc.)  
 
 - `filter` *Object*  
   - `urls` *string[]* : Array of URL patterns that will be used to filter out the requests that do not match the URL patterns. Same structure as the original filters.
 
-- `listener` *Function*  
-  Action
+- `action` *Function*  
+  Function that will be called when the method event has happened. It matches the original signature and will be called with `action(details, [callback])`.
+  - `details` *Object* : describes the request. Check the Electron documentation for more details.
+  - `callback` *Function* : passed only if the method uses callback (cf with/without callback). Should be called when the listener has done its work, with a `response` object.
 
-- `context` *Object*  
-  Options
+- `context` *Object* (optional)  
+  Holds informations to tie in the listener context. You can add any properties you need to help your merging strategy (ex: `priority` or `origin`). It will automatically be populated with an `order` that indicates the order in which listeners are added.  
+  Example :
+  ```
+  {
+    origin: 'pluginX',
+    priority: 10,
+  }
+  ```
 
-Do blabla  
-Returns a listener, such as `{}`
+This function is the main layer added to the web request. The exposed [event methods]() are alias relying on this one to add and keep track of listeners under the hood.
+
+When a listener is added (to a method event), it registers it to an internal map, merge the new filters with all pre-existing filters (other listeners), and update the bind with the underlying `electron.webRequest` (injected dependency).
+
+When an event happens, the web request (catched in `electron.webRequest`) is passed to the module which will sort the listeners that matches the URL and apply all of them.
+
+- If the event method doesn't have a callback, all listeners are applied.
+
+- If the event method has a callback, the web request can be modified, and the resolver is used to determine how the web request should be modified, and send the final result. See the `setResolver()` below for more details.
+
+The method `addListener()` returns an object describing a listener, such as :  
+```js
+{
+  id: '<generated listener id>',
+  urls: [
+    'pattern A',
+    'pattern B',
+  ],
+  action: (details, [callback]) => { /* listener action when triggered */ },
+  context: {
+    // any custom information
+    order: 1 // generated order
+  }
+}
+```
 
 **`removeListener(method, id)`**  
 - `method` *string*  
-  Idem
+  Targeted method event
 
 - `id` *string*  
-  Id of a listener, generated when added.
+  Listener ID, check the `addListener` method for more details.
 
-Remove listener from a method, and its filters.
+Stop a listener from being triggered again : remove it from its associated method and remove its filter from the web request event.
 
 **`clearListeners(method)`**  
 - `method` *string*
-  Idem
+  Targeted method event
 
-Remove ALL listeners to a method, clear filters and unsubscribe.
+Remove ALL listeners of a method, clear all associated filters and unsubscribe from this web request event.
 
 **`setResolver(method, resolver)`**
 - `method` *string*  
-  Idem
+  Targeted method event
 
 - `resolver` *Function*  
-  A function with the sigature like `resolver(listeners) => {}`. Used to blabla, do blabla.
+  A function with the sigature : `resolver(listeners) => {}`. Used to blabla, do blabla.
 
 Assign to, and used to do something awesome.
 
-**`hasCallback(method)`**  
-- `methid` *string*  
-  Idem
+### Helper methods
 
-Used to know if a method has a callback or not.
+**`hasCallback(method)`**  
+- `method` *string*  
+  Targeted method event
+
+Return `true` if the given method name has a callback.
 
 **`getListeners()`**  
 
-Used to get all the registered filters by methods.
+Get all the listeners, sorted by method.
 
 **`getListenersFor(method)`**  
 - `method` *string*  
-  Idem
+  Targeted method event
 
-Used to get all the listeners registered to a specif method.
+Get all the listeners associated with a method.
 
 **`getFilters()`**  
 
-Used to get all the filters applied to a method.
+Get all the filters, sorted by method.
 
 **`getFiltersFor(method)`**  
 - `method` *string*  
-  Idem
+  Targeted method event
 
-Used to get all the filters applied to a specif method.
+Get all the filters associated with a method.
 
 ## Resources
 

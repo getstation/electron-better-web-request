@@ -274,7 +274,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
   private identifyAction(method: WebRequestMethod, args: any) {
     return (args.unbind)
     ? this.clearListeners(method)
-    : this.addListener(method, args.filter, args.action, args.options);
+    : this.addListener(method, args.filter, args.action, args.context);
   }
 
   private parseArguments(parameters: any): object {
@@ -282,7 +282,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
       unbind: false,
       filter: { urls: ['<all_urls>'] },
       action: null,
-      options: {},
+      context: {},
     };
 
     switch (parameters.length) {
@@ -307,7 +307,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
 
         if (typeof parameters[0] === 'function') {
           args.action = parameters[0];
-          args.options = parameters[1];
+          args.context = parameters[1];
           break;
         }
 
@@ -317,11 +317,11 @@ export default class BetterWebRequest implements IBetterWebRequest {
         if (typeof parameters[0] === 'object' && typeof parameters[1] === 'function') {
           args.filter = parameters[0];
           args.action = parameters[1];
-          args.options = parameters[3];
+          args.context = parameters[3];
           break;
         }
 
-        throw new Error('Wrong function signature : should be arg 1 -> filter object, arg 2 -> function listener, arg 3 -> options');
+        throw new Error('Wrong function signature : should be arg 1 -> filter object, arg 2 -> function listener, arg 3 -> context');
 
       default :
         throw new Error('Wrong function signature : Too many arguments');
