@@ -2,7 +2,7 @@ import BetterWebRequest from './electron-better-web-request';
 
 const store = new Set();
 
-const withBetterWebRequest = (session: any) => {
+const enhanceWebRequest = (session: any) => {
   if (store.has(session)) {
     return session;
   }
@@ -17,4 +17,4 @@ const withBetterWebRequest = (session: any) => {
   return session;
 };
 
-export default withBetterWebRequest;
+export default enhanceWebRequest;

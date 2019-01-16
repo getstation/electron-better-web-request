@@ -16,9 +16,11 @@ npm install electron-better-web-request
 
 Override Electron web request
 ```js
-const BetterWebRequest = require('better-electron-web-request')
-defaultSession.webRequest = new BetterWebRequest(defaultSession.webRequest)
+enhanceWebRequest(session);
 ```
+Calling `enhanceWebRequest()` with the target `session` will override its `webRequest` with this module. From there, you can keep using it as usual, with all the new benefits.
+
+*⚠ Note :* If you call `enchanceWebRequest` on a session that has already been enhanced, it will NOT override again the module, preserving all the listeners that you previously registered.
 
 Basic drop in replacement
 ```js
@@ -26,7 +28,7 @@ const filter = {
   urls: ['https://*.github.com/*', '*://electron.github.io']
 }
 
-defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+session.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
   details.requestHeaders['User-Agent'] = 'MyAgent'
   callback({cancel: false, requestHeaders: details.requestHeaders})
 })
@@ -39,12 +41,12 @@ const filter = {
 }
 
 // Add more than one listener...
-defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+session.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
   details.requestHeaders['User-Agent'] = 'MyAgent'
   callback({cancel: false, requestHeaders: details.requestHeaders})
 })
 
-defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+session.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
   // Alter the web request in another way
   callback({cancel: false, [...]})
 })
@@ -64,7 +66,7 @@ default.webRequest.setResolver('onBeforeSendHeaders', (listeners) => {
   return last.apply();
 })
 ```
-Check the API details below to see what the array[`listeners` is made of]().
+Check the API details below to see what the array [`listeners` is made of]().
 
 ## API
 
@@ -99,21 +101,79 @@ For more details about `filters` or `listener` please refer to [Electron Web Req
 
 To extend the behavior of web requests listeners, the module adds the following methods :
 
-**`addListener()`**
+**`addListener(method, filter, listener, context)`**
+- `method` *string*  
+  The name of the targeted method (onBeforeRequest, onCompleted, etc.)  
 
-**`removeListener()`**
+- `filter` *Object*  
+  - `urls` *string[]* : Array of URL patterns that will be used to filter out the requests that do not match the URL patterns. Same structure as the original filters.
 
-**`clearListeners()`**
+- `listener` *Function*  
+  Action
 
-**`setResolver()`**
+- `context` *Object*  
+  Options
 
-**`hasCallback()`**
+Do blabla  
+Returns a listener, such as `{}`
 
-**`getListeners()`**
+**`removeListener(method, id)`**  
+- `method` *string*  
+  Idem
 
-**`getListenersFor()`**
+- `id` *string*  
+  Id of a listener, generated when added.
+
+Remove listener from a method, and its filters.
+
+**`clearListeners(method)`**  
+- `method` *string*
+  Idem
+
+Remove ALL listeners to a method, clear filters and unsubscribe.
+
+**`setResolver(method, resolver)`**
+- `method` *string*  
+  Idem
+
+- `resolver` *Function*  
+  A function with the sigature like `resolver(listeners) => {}`. Used to blabla, do blabla.
+
+Assign to, and used to do something awesome.
+
+**`hasCallback(method)`**  
+- `methid` *string*  
+  Idem
+
+Used to know if a method has a callback or not.
+
+**`getListeners()`**  
+
+Used to get all the registered filters by methods.
+
+**`getListenersFor(method)`**  
+- `method` *string*  
+  Idem
+
+Used to get all the listeners registered to a specif method.
+
+**`getFilters()`**  
+
+Used to get all the filters applied to a method.
+
+**`getFiltersFor(method)`**  
+- `method` *string*  
+  Idem
+
+Used to get all the filters applied to a specif method.
 
 ## Resources
-Electron Web Request  
-Issue about web requests  
-Chrome URL pattern matching  
+
+[Electron Web Request documentation](https://electronjs.org/docs/api/web-request)  
+This module is based on electron web request and extends it. Most of its mecanics come from there.
+
+[Issue about web requests](https://github.com/electron/electron/issues/10478)  
+This module was first thought to solve this issue and allow more than one listener per event.
+
+[Chrome URL Match Patterns](https://developer.chrome.com/extensions/match_patterns)  
+The patterns used to match URL is based on Chrome URL pattern matching.
