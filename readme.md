@@ -109,7 +109,7 @@ To extend the behavior of web requests listeners, the module adds the following 
   - `urls` *string[]* : Array of URL patterns that will be used to filter out the requests that do not match the URL patterns. Same structure as the original filters.
 
 - `action` *Function*  
-  Function that will be called when the method event has happened. It matches the original signature and will be called with `action(details, [callback])`.
+  This function will be called when the method event has happened. It matches the original signature and will be called with `action(details, [callback])`.
   - `details` *Object* : describes the request. Check the Electron documentation for more details.
   - `callback` *Function* : passed only if the method uses callback (cf with/without callback). Should be called when the listener has done its work, with a `response` object.
 
@@ -141,10 +141,12 @@ The method `addListener()` returns an object describing a listener, such as :
     'pattern A',
     'pattern B',
   ],
-  action: (details, [callback]) => { /* listener action when triggered */ },
+  action: (details, [callback]) => {
+    // listener passed as argument
+  },
   context: {
-    // any custom information
-    order: 1 // generated order
+    // custom context passed as argument
+    order: 1 // automatically added order
   }
 }
 ```
@@ -169,9 +171,36 @@ Remove ALL listeners of a method, clear all associated filters and unsubscribe f
   Targeted method event
 
 - `resolver` *Function*  
-  A function with the sigature : `resolver(listeners) => {}`. Used to blabla, do blabla.
+  This function will be called with `resolver(listeners)` when the event has happened, and listeners have been matched.  
+  - `listeners` *listeners[]* : Array of object describing listeners with 2 properties :
+    - `context` *Object* : Holds the context previously set when the listener was added.
+    - `apply()` *Function* : Returns a `Promise` that resolves with the modified web request.   
+      The modifications are applied on the original web request received in the event.  
+      The results are isolated from any other applied listener.
 
-Assign to, and used to do something awesome.
+Registers a function that will be used as a resolver for the given method. It is the role of the resolver to determine how to merge different listener's result into one final result.
+
+The resolver is used only on event method with callback. When such an method is triggered, the module sorts all the matching listeners and then calls the resolver with an array of items representing each of these listeners.
+
+The resolver must return the final `response` object.
+
+Example :
+
+```js
+// Merge all listener modification and propagate cancel if it occurs
+setResolver('onBeforeRequest', (listeners) => {
+  const response = listeners.reduce((accumulator, element) => {
+    if (accumulator.cancel) {
+      return accumulator
+    }
+
+    const result = element.apply()
+    return { ...accumulator, ...result }
+  }, { cancel: false })
+  
+  return response
+})
+```
 
 ### Helper methods
 
