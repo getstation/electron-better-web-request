@@ -77,7 +77,7 @@ All the original web request methods are available :
 With callback : `onBeforeRequest` `onBeforeSendHeaders` `onHeadersReceived`  
 Without callback : `onSendHeaders` `onResponseStarted` `onBeforeRedirect` `onCompleted` `onErrorOccurred`
 
-The all use the same original signature, plus an additional (and optional) set of options. See an example below for `onBeforeRequest` :
+The all use the same original signature, plus an additional (and optional) set of options. See an example below :
 
 **`onBeforeRequest([filters ,] listener, [context])`**
 
@@ -114,7 +114,8 @@ To extend the behavior of web requests listeners, the module adds the following 
   - `callback` *Function* : passed only if the method uses callback (cf with/without callback). Should be called when the listener has done its work, with a `response` object.
 
 - `context` *Object* (optional)  
-  Holds informations to tie in the listener context. You can add any properties you need to help your merging strategy (ex: `priority` or `origin`). It will automatically be populated with an `order` that indicates the order in which listeners are added.  
+  Holds informations to tie in the listener context. You can add any properties you need to help your merging strategy (ex: `priority` or `origin`). It will automatically be populated with an `order` that indicates the order in which listeners are added.
+
   Example :
   ```
   {
@@ -180,21 +181,21 @@ Remove ALL listeners of a method, clear all associated filters and unsubscribe f
 
 Registers a function that will be used as a resolver for the given method. It is the role of the resolver to determine how to merge different listener's result into one final result.
 
-The resolver is used only on event method with callback. When such an method is triggered, the module sorts all the matching listeners and then calls the resolver with an array of items representing each of these listeners.
+The resolver is used only on event method with callback. When such an method is triggered, the module sorts all the matching listeners and then calls the resolver with an array of items representing each of them.
 
 The resolver must return the final `response` object.
 
 Example :
 
 ```js
-// Merge all listener modification and propagate cancel if it occurs
+// Merge all listener modifications and propagate cancel if it occurs
 setResolver('onBeforeRequest', (listeners) => {
-  const response = listeners.reduce((accumulator, element) => {
+  const response = listeners.reduce(async (accumulator, element) => {
     if (accumulator.cancel) {
       return accumulator
     }
 
-    const result = element.apply()
+    const result = await element.apply()
     return { ...accumulator, ...result }
   }, { cancel: false })
   
