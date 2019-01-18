@@ -1,6 +1,6 @@
 import assert from 'assert';
 
-import BetterWebRequest from '../src/electron-better-web-request';
+import { BetterWebRequest } from '../src/electron-better-web-request';
 import {
   IListener,
 } from '../src/types';

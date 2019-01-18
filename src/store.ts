@@ -1,19 +1,21 @@
-import BetterWebRequest from './electron-better-web-request';
+import { Session } from 'electron';
+
+import betterWebRequest from './electron-better-web-request';
 
 const store = new Set();
 
-const enhanceWebRequest = (session: any) => {
+const enhanceWebRequest = (session: Session): Session => {
   if (store.has(session)) {
     return session;
   }
 
-  const betterWR = new BetterWebRequest(session.webRequest);
   Object.defineProperty(session, 'webRequest', {
-    value: betterWR,
+    value: betterWebRequest(session),
     writable: false,
   });
 
   store.add(session);
+
   return session;
 };
 

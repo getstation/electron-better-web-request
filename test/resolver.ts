@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { EventEmitter } from 'events';
 
-import BetterWebRequest from '../src/electron-better-web-request';
+import { BetterWebRequest } from '../src/electron-better-web-request';
 
 describe('Resolver', () => {
   describe('Default resolver', () => {

@@ -35,18 +35,16 @@ export interface IApplier {
   context: IContext,
 }
 
+export interface IAliasParameters {
+  unbind: boolean,
+  filter: IFilter,
+  action: Function | null,
+  context: Object,
+}
+
 export type IListenerCollection = Map<IListener['id'], IListener>;
 
 export interface IBetterWebRequest {
-  onBeforeRequest(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
-  onBeforeSendHeaders(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
-  onHeadersReceived(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
-  onSendHeaders(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
-  onResponseStarted(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
-  onBeforeRedirect(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
-  onCompleted(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
-  onErrorOccurred(filter: IFilter, action: Function, options: Partial<IContext>): IListener | void;
-
   addListener(method: WebRequestMethod, filter: IFilter, action: Function, context: Partial<IContext>): IListener;
   removeListener(method: WebRequestMethod, id: IListener['id']): void;
   clearListeners(method: WebRequestMethod): void;
