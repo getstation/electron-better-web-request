@@ -126,18 +126,19 @@ export default class BetterWebRequest implements IBetterWebRequest {
       context,
     };
 
+    // Add listener to method map
     if (!this.listeners.has(method)) {
       this.listeners.set(method, new Map());
     }
-    const listeners = this.listeners.get(method);
-    if (!listeners) throw new Error('Listeners Map has not been properly initialized');
-    listeners.set(id, listener);
 
+    this.listeners.get(method)!.set(id, listener);
+
+    // Add filters to the method map
     if (!this.filters.has(method)) {
       this.filters.set(method, new Set());
     }
-    const currentFilters = this.filters.get(method);
-    if (!currentFilters) throw new Error('Filters Set has not been properly initialized');
+
+    const currentFilters = this.filters.get(method)!;
     for (const url of urls) {
       currentFilters.add(url);
     }
@@ -150,6 +151,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
 
   removeListener(method: WebRequestMethod, id: IListener['id']) {
     const listeners = this.listeners.get(method);
+
     if (!listeners || !listeners.has(id)) {
       return;
     }
@@ -158,6 +160,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
       this.clearListeners(method);
     } else {
       listeners.delete(id);
+
       const newFilters = this.mergeFilters(listeners);
       this.filters.set(method, newFilters);
 
@@ -181,6 +184,7 @@ export default class BetterWebRequest implements IBetterWebRequest {
       if (this.resolvers.has(method)) {
         console.warn('Overriding resolver on ', method);
       }
+
       this.resolvers.set(method, resolver);
     } else {
       console.warn(`Method ${method} has no callback and does not use a resolver`);
@@ -190,13 +194,13 @@ export default class BetterWebRequest implements IBetterWebRequest {
   // Find a subset of listeners that match a given url
   matchListeners(url: string, listeners: IListenerCollection): IListener[] {
     const arrayListeners = Array.from(listeners.values());
-    const subset = arrayListeners.filter(element => {
+
+    return arrayListeners.filter(element => {
       for (const pattern of element.urls) {
         if (match(pattern, url)) return true;
       }
       return false;
     });
-    return subset;
   }
 
   // Workflow triggered when a web request arrive
@@ -209,19 +213,25 @@ export default class BetterWebRequest implements IBetterWebRequest {
       }
 
       const listeners = this.listeners.get(method);
+
       if (!listeners) {
         if (callback) callback({ cancel : false });
         return;
       }
 
       const matchedListeners = this.matchListeners(details.url, listeners);
+
       if (matchedListeners.length === 0) {
         if (callback) callback({ cancel: false });
         return;
       }
 
       let resolve = this.resolvers.get(method);
-      if (!resolve) resolve = defaultResolver;
+
+      if (!resolve) {
+        resolve = defaultResolver;
+      }
+
       const requestsProcesses = this.processRequests(details, matchedListeners);
 
       if (this.hasCallback(method) && callback) {
@@ -237,13 +247,14 @@ export default class BetterWebRequest implements IBetterWebRequest {
   // Wrap them so they can be triggered only when needed
   private processRequests(details: any, requestListeners: IListener[]): IApplier[] {
     const appliers: IApplier[] = [];
+
     for (const listener of requestListeners) {
       const apply = this.makeApplier(details, listener.action);
-      const executor = {
+
+      appliers.push({
         apply,
         context: listener.context,
-      };
-      appliers.push(executor);
+      });
     }
 
     return appliers;
@@ -263,18 +274,14 @@ export default class BetterWebRequest implements IBetterWebRequest {
 
   private mergeFilters(listeners: IListenerCollection) {
     const arrayListeners = Array.from(listeners.values());
-    const filters = arrayListeners.reduce((accumulator, value) => {
-      for (const url of value.urls) accumulator.add(url);
-      return accumulator;
-    }, new Set());
 
-    return filters;
-  }
-
-  private identifyAction(method: WebRequestMethod, args: any) {
-    return (args.unbind)
-    ? this.clearListeners(method)
-    : this.addListener(method, args.filter, args.action, args.context);
+    return arrayListeners.reduce(
+      (accumulator, value) => {
+        for (const url of value.urls) accumulator.add(url);
+        return accumulator;
+      },
+      new Set()
+    );
   }
 
   private parseArguments(parameters: any): object {
@@ -328,5 +335,13 @@ export default class BetterWebRequest implements IBetterWebRequest {
     }
 
     return args;
+  }
+
+  private identifyAction(method: WebRequestMethod, args: any) {
+    if (args.unbind) {
+      return this.clearListeners(method);
+    }
+
+    return this.addListener(method, args.filter, args.action, args.context);
   }
 }

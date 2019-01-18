@@ -8,12 +8,14 @@ const enhanceWebRequest = (session: any) => {
   }
 
   const betterWR = new BetterWebRequest(session.webRequest);
+
   Object.defineProperty(session, 'webRequest', {
     value: betterWR,
     writable: false,
   });
 
   store.add(session);
+
   return session;
 };
 
