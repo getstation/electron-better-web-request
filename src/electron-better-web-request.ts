@@ -1,3 +1,4 @@
+import { Session } from 'electron';
 import match from 'url-match-patterns';
 import uuid from 'uuid/v4';
 
@@ -18,7 +19,24 @@ const defaultResolver = (listeners: IApplier[]) => {
   return last.apply();
 };
 
-export default class BetterWebRequest implements IBetterWebRequest {
+const methodsWithCallback = [
+  'onBeforeRequest',
+  'onBeforeSendHeaders',
+  'onHeadersReceived',
+];
+
+const aliasMethods = [
+  'onBeforeRequest',
+  'onBeforeSendHeaders',
+  'onHeadersReceived',
+  'onSendHeaders',
+  'onResponseStarted',
+  'onBeforeRedirect',
+  'onCompleted',
+  'onErrorOccurred',
+];
+
+export class BetterWebRequest implements IBetterWebRequest {
   private webRequest: any;
 
   private orderIndex: number;
@@ -55,61 +73,11 @@ export default class BetterWebRequest implements IBetterWebRequest {
   }
 
   hasCallback(method: WebRequestMethod): boolean {
-    switch (method) {
-      case 'onBeforeRequest':
-      case 'onBeforeSendHeaders':
-      case 'onHeadersReceived':
-        return true;
-      default:
-        return false;
-    }
+    return methodsWithCallback.includes(method);
   }
 
-  // Alias for drop in replacement
-  onBeforeRequest(...parameters: any) {
-    const method = 'onBeforeRequest';
-    const args = this.parseArguments(parameters);
-    return this.identifyAction(method, args);
-  }
-
-  onBeforeSendHeaders(...parameters: any) {
-    const method = 'onBeforeSendHeaders';
-    const args = this.parseArguments(parameters);
-    return this.identifyAction(method, args);
-  }
-
-  onHeadersReceived(...parameters: any) {
-    const method = 'onHeadersReceived';
-    const args = this.parseArguments(parameters);
-    return this.identifyAction(method, args);
-  }
-
-  onSendHeaders(...parameters: any) {
-    const method = 'onSendHeaders';
-    const args = this.parseArguments(parameters);
-    return this.identifyAction(method, args);
-  }
-
-  onResponseStarted(...parameters: any) {
-    const method = 'onResponseStarted';
-    const args = this.parseArguments(parameters);
-    return this.identifyAction(method, args);
-  }
-
-  onBeforeRedirect(...parameters: any) {
-    const method = 'onBeforeRedirect';
-    const args = this.parseArguments(parameters);
-    return this.identifyAction(method, args);
-  }
-
-  onCompleted(...parameters: any) {
-    const method = 'onCompleted';
-    const args = this.parseArguments(parameters);
-    return this.identifyAction(method, args);
-  }
-
-  onErrorOccurred(...parameters: any) {
-    const method = 'onErrorOccurred';
+  // Handling alias for drop in replacement
+  alias(method: WebRequestMethod, ...parameters: any) {
     const args = this.parseArguments(parameters);
     return this.identifyAction(method, args);
   }
@@ -186,9 +154,9 @@ export default class BetterWebRequest implements IBetterWebRequest {
       }
 
       this.resolvers.set(method, resolver);
-    } else {
-      console.warn(`Method ${method} has no callback and does not use a resolver`);
     }
+
+    console.warn(`Method ${method} has no callback and does not use a resolver`);
   }
 
   // Find a subset of listeners that match a given url
@@ -335,10 +303,32 @@ export default class BetterWebRequest implements IBetterWebRequest {
   }
 
   private identifyAction(method: WebRequestMethod, args: any) {
-    if (args.unbind) {
+    const { unbind, filter, action, context } = args;
+
+    if (unbind) {
       return this.clearListeners(method);
     }
 
-    return this.addListener(method, args.filter, args.action, args.context);
+    return this.addListener(method, filter, action, context);
   }
 }
+
+// Proxy handler that add support for all alias methods by redirecting to BetterWebRequest.alias()
+const aliasHandler = {
+  get: (target: BetterWebRequest, property: any) => {
+    if (aliasMethods.includes(property)) {
+      return (...parameters: any) => {
+        target.alias(property, parameters);
+      };
+    }
+
+    return target[property];
+  },
+};
+
+export default (session: Session) => {
+  return new Proxy(
+    new BetterWebRequest(session.webRequest),
+    aliasHandler
+  );
+};
