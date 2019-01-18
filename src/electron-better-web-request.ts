@@ -78,7 +78,7 @@ export class BetterWebRequest implements IBetterWebRequest {
   }
 
   // Handling alias for drop in replacement
-  alias(method: WebRequestMethod, ...parameters: any) {
+  alias(method: WebRequestMethod, parameters: any) {
     const args = this.parseArguments(parameters);
     return this.identifyAction(method, args);
   }
