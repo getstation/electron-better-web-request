@@ -35,6 +35,13 @@ export interface IApplier {
   context: IContext,
 }
 
+export interface IAliasParameters {
+  unbind: boolean,
+  filter: IFilter,
+  action: Function | null,
+  context: Object,
+}
+
 export type IListenerCollection = Map<IListener['id'], IListener>;
 
 export interface IBetterWebRequest {

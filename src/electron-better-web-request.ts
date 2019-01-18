@@ -11,6 +11,7 @@ import {
   IContext,
   IApplier,
   IListenerCollection,
+  IAliasParameters,
 } from './types';
 
 const defaultResolver = (listeners: IApplier[]) => {
@@ -249,7 +250,7 @@ export class BetterWebRequest implements IBetterWebRequest {
     );
   }
 
-  private parseArguments(parameters: any): object {
+  private parseArguments(parameters: any): IAliasParameters {
     const args = {
       unbind: false,
       filter: { urls: ['<all_urls>'] },
@@ -302,11 +303,15 @@ export class BetterWebRequest implements IBetterWebRequest {
     return args;
   }
 
-  private identifyAction(method: WebRequestMethod, args: any) {
+  private identifyAction(method: WebRequestMethod, args: IAliasParameters) {
     const { unbind, filter, action, context } = args;
 
     if (unbind) {
       return this.clearListeners(method);
+    }
+
+    if (!action) {
+      throw new Error(`Cannot bind with ${method} : a listener is missing.`);
     }
 
     return this.addListener(method, filter, action, context);
