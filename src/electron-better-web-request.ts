@@ -195,12 +195,9 @@ export default class BetterWebRequest implements IBetterWebRequest {
   matchListeners(url: string, listeners: IListenerCollection): IListener[] {
     const arrayListeners = Array.from(listeners.values());
 
-    return arrayListeners.filter(element => {
-      for (const pattern of element.urls) {
-        if (match(pattern, url)) return true;
-      }
-      return false;
-    });
+    return arrayListeners.filter(
+      element => element.urls.some(value => match(value, url))
+    );
   }
 
   // Workflow triggered when a web request arrive
