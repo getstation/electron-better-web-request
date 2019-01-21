@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "outDir": "lib",
-    "allowJs": true,
+    "declaration": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
@@ -33,7 +33,6 @@
   },
   "include": [
     "src/**/*",
-    "test/**/*",
   ],
   "exclude": [
     "node_modules/**/*"

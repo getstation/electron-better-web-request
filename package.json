@@ -1,14 +1,17 @@
 {
   "name": "electron-better-web-request",
-  "version": "1.0.0-rc2",
+  "version": "1.0.0-rc5",
   "description": "Module replacement for electron-web-request",
-  "main": "index.js",
+  "main": "./lib/store.js",
   "author": "Station <hello@getstation.com>",
   "license": "ISC",
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*.ts",
-    "prepublish": "rm -rf ./lib/ && tslint -p . && tsc -p ."
+    "prepublish": "rm -rf ./lib/ && tslint -p . && tsc -p . --declaration"
   },
+  "files": [
+    "lib"
+  ],
   "devDependencies": {
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.12.18",
