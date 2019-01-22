@@ -2,7 +2,7 @@
 
 This module aims to extend the usage of `electron-web-request` by allowing to bind different listeners to the lifecycle events proposed by Electron. It aligns with the base usage found [here](https://electronjs.org/docs/api/web-request), but work around [this issue](https://github.com/electron/electron/issues/10478) by proposing a multi-listeners mechanism.
 
-It can be used as a drop-in replacement, and needs to be applied to `Electron.session` (override the default `webRequest`, see [usage]()) to work identically. If used as is, it only uses the last registered listener for a method (retro-compatible). On top of that, the [API]() offers ways to add/remove listeners, give them context and define a custom merging strategy for all applicable listeners.
+It can be used as a drop-in replacement, and needs to be applied to `Electron.session` (override the default `webRequest`, see [usage](https://github.com/getstation/electron-better-web-request#usage)) to work identically. If used as is, it only uses the last registered listener for a method (retro-compatible). On top of that, the [API](https://github.com/getstation/electron-better-web-request#api) offers ways to add/remove listeners, give them context and define a custom merging strategy for all applicable listeners.
 
 ## Getting started
 
@@ -66,14 +66,14 @@ session.webRequest.setResolver('onBeforeSendHeaders', (listeners) => {
   return last.apply()
 })
 ```
-Check the API details below to see what the array [`listeners` is made of]().
+Check the `setResolver()` API details below to see what the array `listeners` is made of.
 
-## API
+# API
 
-This module is built on a set of [new methods]() that offer more capabilities with `webRequest`. Is also exposes [alias methods]() that comply with the original `webRequest` API (to be retro-compatible). All those aliases are using the new methods under the hood so that you can use either of them indistinctly.  
-Besides, you can find [helper methods]() to help manage the multiple listeners.
+This module is built on a set of [new methods](https://github.com/getstation/electron-better-web-request#new-methods) that offer more capabilities with `webRequest`. Is also exposes [alias methods](https://github.com/getstation/electron-better-web-request#new-methods) that comply with the original `webRequest` API (to be retro-compatible). All those aliases are using the new methods under the hood so that you can use either of them indistinctly.  
+Besides, you can find [helper methods](https://github.com/getstation/electron-better-web-request#new-methods) to help manage the multiple listeners.
 
-### New methods
+## New methods
 
 To extend the behavior of web requests listeners, the module adds the following methods :
 
@@ -103,7 +103,7 @@ To extend the behavior of web requests listeners, the module adds the following 
   ---
   📄 Check [electron webRequest documentation](https://electronjs.org/docs/api/web-request) for more details about `filter`, `actions` (aka `listener` in the doc), `details` and `callback` parameters.
 
-This function is the primary layer added to the web request. The exposed [alias methods]() are relying on this one to add and keep track of listeners under the hood.
+This function is the primary layer added to the web request. The exposed [alias methods](https://github.com/getstation/electron-better-web-request#alias-methods) are relying on this one to add and keep track of listeners under the hood.
 
 When a listener is added (to a method event), it registers it to an internal map, merges the new filters with all pre-existing filters (other listeners), and update the bind with the underlying `electron.webRequest` (injected dependency).
 
@@ -182,7 +182,7 @@ setResolver('onBeforeRequest', (listeners) => {
 })
 ```
 
-### Helper methods
+## Helper methods
 
 **`hasCallback(method)`**  
 - `method` *string*  
@@ -210,7 +210,7 @@ Get all the filters, sorted by method.
 
 Get all the filters associated with a method.
 
-### Alias methods
+## Alias methods
 
 All the original web request methods are available :
 
@@ -234,13 +234,12 @@ They all use the same original signature, plus an additional (and optional) set 
 - `context` *Object* (optional)  
   Holds information to tie in the listener context. You can add any properties you need to help your merging strategy (ex: `priority` or `origin`). It is automatically populated with an `order` that indicates the order in which listeners are added. The context is available in the resolver (see above).
 
----
 Once again, for more details about `filters` or `listener` please refer to [Electron Web Request documentation](https://electronjs.org/docs/api/web-request).
 
 ## Resources
 
 [Electron Web Request documentation](https://electronjs.org/docs/api/web-request)  
-As you might have guessed since then, this module is based on electron web request and extends it. Most of its mechanics come from there. So the documentation is a good read!
+As you might have guessed since then, this module is based on electron web request and extends it. Most of its mechanics come from there. So the documentation is a good read! Did I say that already?
 
 [Issue about web requests](https://github.com/electron/electron/issues/10478)  
 This module was first thought to solve this issue and allow more than one listener per event.
