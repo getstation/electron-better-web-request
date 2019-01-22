@@ -70,8 +70,8 @@ Check the `setResolver()` API details below to see what the array `listeners` is
 
 # API
 
-This module is built on a set of [new methods](https://github.com/getstation/electron-better-web-request#new-methods) that offer more capabilities with `webRequest`. Is also exposes [alias methods](https://github.com/getstation/electron-better-web-request#new-methods) that comply with the original `webRequest` API (to be retro-compatible). All those aliases are using the new methods under the hood so that you can use either of them indistinctly.  
-Besides, you can find [helper methods](https://github.com/getstation/electron-better-web-request#new-methods) to help manage the multiple listeners.
+This module is built on a set of [new methods](https://github.com/getstation/electron-better-web-request#new-methods) that offer more capabilities with `webRequest`. Is also exposes [alias methods](https://github.com/getstation/electron-better-web-request#alias-methods) that comply with the original `webRequest` API (to be retro-compatible). All those aliases are using the new methods under the hood so that you can use either of them indistinctly.  
+Besides, you can find [helper methods](https://github.com/getstation/electron-better-web-request#helper-methods) to help manage the multiple listeners.
 
 ## New methods
 
