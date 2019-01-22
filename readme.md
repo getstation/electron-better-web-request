@@ -70,7 +70,7 @@ Check the `setResolver()` API details below to see what the array `listeners` is
 
 # API
 
-This module is built on a set of [new methods](https://github.com/getstation/electron-better-web-request#new-methods) that offer more capabilities with `webRequest`. Is also exposes [alias methods](https://github.com/getstation/electron-better-web-request#alias-methods) that comply with the original `webRequest` API (to be retro-compatible). All those aliases are using the new methods under the hood so that you can use either of them indistinctly.  
+This module is built on a set of [new methods](https://github.com/getstation/electron-better-web-request#new-methods) that offer more capabilities with `webRequest`. It also exposes [alias methods](https://github.com/getstation/electron-better-web-request#alias-methods) that comply with the original `webRequest` API (to be retro-compatible). All those aliases are using the new methods under the hood so that you can use either of them indistinctly.  
 Besides, you can find [helper methods](https://github.com/getstation/electron-better-web-request#helper-methods) to help manage the multiple listeners.
 
 ## New methods
@@ -217,7 +217,7 @@ All the original web request methods are available :
 With callback : `onBeforeRequest` `onBeforeSendHeaders` `onHeadersReceived`  
 Without callback : `onSendHeaders` `onResponseStarted` `onBeforeRedirect` `onCompleted` `onErrorOccurred`
 
-They all use the same original signature, plus an additional (and optional) set of options. See an example below :
+They all use the same original signature, plus an additional (and optional) set of options. Under the hood, they rely on [`addListener()`](https://github.com/getstation/electron-better-web-request#new-methods). See an example below for `onBeforeRequest` :
 
 **`onBeforeRequest([filters ,] listener, [context])`**
 
