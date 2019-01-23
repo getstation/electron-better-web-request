@@ -149,15 +149,16 @@ export class BetterWebRequest implements IBetterWebRequest {
   }
 
   setResolver(method: WebRequestMethod, resolver: Function) {
-    if (this.hasCallback(method)) {
-      if (this.resolvers.has(method)) {
-        console.warn('Overriding resolver on ', method);
-      }
-
-      this.resolvers.set(method, resolver);
+    if (!this.hasCallback(method)) {
+      console.warn(`Event method "${method}" has no callback and does not use a resolver`);
+      return;
     }
 
-    console.warn(`Method ${method} has no callback and does not use a resolver`);
+    if (this.resolvers.has(method)) {
+      console.warn(`Overriding resolver on "${method}" method event`);
+    }
+
+    this.resolvers.set(method, resolver);
   }
 
   // Find a subset of listeners that match a given url
