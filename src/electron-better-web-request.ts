@@ -182,7 +182,7 @@ export class BetterWebRequest implements IBetterWebRequest {
       const listeners = this.listeners.get(method);
 
       if (!listeners) {
-        if (callback) callback({ cancel : false });
+        if (callback) callback({ cancel: false });
         return;
       }
 
@@ -260,11 +260,11 @@ export class BetterWebRequest implements IBetterWebRequest {
     };
 
     switch (parameters.length) {
-      case 0 :
+      case 0:
         args.unbind = true;
         break;
 
-      case 1 :
+      case 1:
         if (typeof parameters[0] === 'function') {
           args.action = parameters[0];
           break;
@@ -272,7 +272,7 @@ export class BetterWebRequest implements IBetterWebRequest {
 
         throw new Error('Wrong function signature : No function listener given');
 
-      case 2 :
+      case 2:
         if (typeof parameters[0] === 'object' && typeof parameters[1] === 'function') {
           args.filter = parameters[0];
           args.action = parameters[1];
@@ -287,17 +287,17 @@ export class BetterWebRequest implements IBetterWebRequest {
 
         throw new Error('Wrong function signature : argument 1 should be an object filters or the function listener');
 
-      case 3 :
+      case 3:
         if (typeof parameters[0] === 'object' && typeof parameters[1] === 'function') {
           args.filter = parameters[0];
           args.action = parameters[1];
-          args.context = parameters[3];
+          args.context = parameters[2];
           break;
         }
 
         throw new Error('Wrong function signature : should be arg 1 -> filter object, arg 2 -> function listener, arg 3 -> context');
 
-      default :
+      default:
         throw new Error('Wrong function signature : Too many arguments');
     }
 
