@@ -1,15 +1,15 @@
 {
   "name": "electron-better-web-request",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Module replacement for electron-web-request",
   "main": "./lib/store.js",
   "author": "Station <hello@getstation.com>",
   "license": "ISC",
   "homepage": "https://github.com/getstation/electron-better-web-request#readme",
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/getstation/electron-better-web-request"
-   },
+    "type": "git",
+    "url": "https://github.com/getstation/electron-better-web-request"
+  },
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*.ts",
     "prepublish": "rm -rf ./lib/ && tslint -p . && tsc -p . --declaration"
@@ -18,15 +18,15 @@
     "lib"
   ],
   "devDependencies": {
-    "@types/mocha": "^5.2.5",
-    "@types/node": "^10.12.18",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^10.14.9",
     "@types/uuid": "^3.4.4",
-    "electron": "^4.0.1",
+    "electron": "^4.2.4",
     "mocha": "^5.2.0",
     "ts-node": "^7.0.1",
-    "tslint": "^5.12.0",
+    "tslint": "^5.17.0",
     "tslint-config-station": "^0.5.1",
-    "typescript": "^3.2.2"
+    "typescript": "^3.5.2"
   },
   "dependencies": {
     "url-match-patterns": "^0.2.0",
