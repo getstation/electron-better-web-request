@@ -1,8 +1,10 @@
 # Electron Better Web Request
 
-This module aims to extend the usage of `electron-web-request` by allowing to bind different listeners to the lifecycle events proposed by Electron. It aligns with the base usage found [here](https://electronjs.org/docs/api/web-request), but work around [this issue](https://github.com/electron/electron/issues/10478) by proposing a multi-listeners mechanism.
+This module extends the usage of `electron-web-request`, allowing to bind different listeners to the lifecycle events proposed by Electron. It aligns with the base usage found [here](https://electronjs.org/docs/api/web-request), but work around [this issue](https://github.com/electron/electron/issues/10478) by proposing a multi-listeners mechanism.
 
-It can be used as a drop-in replacement, and needs to be applied to `Electron.session` (override the default `webRequest`, see [usage](https://github.com/getstation/electron-better-web-request#usage)) to work identically. If used as is, it only uses the last registered listener for a method (retro-compatible). On top of that, the [API](https://github.com/getstation/electron-better-web-request#api) offers ways to add/remove listeners, give them context and define a custom merging strategy for all applicable listeners.
+It can be used as a drop-in replacement, and needs to be applied to `Electron.session` (override the default `webRequest`, see [usage](https://github.com/getstation/electron-better-web-request#usage)) to work identically. **If used as is, it only uses the last registered listener** for a method (retro-compatible).
+
+On top of that, the [API](https://github.com/getstation/electron-better-web-request#api) offers ways to add/remove listeners, give them context and define a custom merging strategy for all applicable listeners.
 
 ## Getting started
 
@@ -20,7 +22,7 @@ enhanceWebRequest(session)
 ```
 Calling `enhanceWebRequest()` with the target `session` will override its `webRequest` with this module. From there, you can keep using it as usual, with all the new benefits.
 
-*⚠ Note :* If you call `enchanceWebRequest` on a session that has already been enhanced, it does NOT override the module again, preserving all the listeners that you previously registered.
+⚠ *Note :* If you call `enchanceWebRequest` on a session that has already been enhanced, it does NOT override the module again, preserving all the listeners that you previously registered.
 
 **Basic drop in replacement**
 ```js
@@ -33,6 +35,8 @@ session.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
   callback({cancel: false, requestHeaders: details.requestHeaders})
 })
 ```
+
+💡 The basic behavior uses only the last registered listener ! Implement your own merging strategy through resolvers to modify this.
 
 **With merging strategy**
 ```js
@@ -66,6 +70,8 @@ session.webRequest.setResolver('onBeforeSendHeaders', (listeners) => {
   return last.apply()
 })
 ```
+💡 The resolver implemented in this example is the one by default and resolve only to the last registered listener.
+
 Check the `setResolver()` API details below to see what the array `listeners` is made of.
 
 # API
