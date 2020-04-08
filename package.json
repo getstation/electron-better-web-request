@@ -7,9 +7,9 @@
   "license": "ISC",
   "homepage": "https://github.com/getstation/electron-better-web-request#readme",
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/getstation/electron-better-web-request"
-   },
+    "type": "git",
+    "url": "https://github.com/getstation/electron-better-web-request"
+  },
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*.ts",
     "prepublish": "rm -rf ./lib/ && tslint -p . && tsc -p . --declaration"
@@ -29,7 +29,7 @@
     "typescript": "^3.2.2"
   },
   "dependencies": {
-    "url-match-patterns": "^0.2.0",
+    "url-match-patterns": "file:local_modules/url-match-patterns",
     "uuid": "^3.3.2"
   }
 }

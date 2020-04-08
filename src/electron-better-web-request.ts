@@ -182,14 +182,14 @@ export class BetterWebRequest implements IBetterWebRequest {
       const listeners = this.listeners.get(method);
 
       if (!listeners) {
-        if (callback) callback({ cancel: false });
+        if (callback) callback({ ...details, cancel: false });
         return;
       }
 
       const matchedListeners = this.matchListeners(details.url, listeners);
 
       if (matchedListeners.length === 0) {
-        if (callback) callback({ cancel: false });
+        if (callback) callback({ ...details, cancel: false });
         return;
       }
 
